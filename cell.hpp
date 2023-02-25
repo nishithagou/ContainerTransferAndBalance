@@ -9,6 +9,7 @@ class Cell{
     /// Cell does not do any deallocation of container pointer 
     Container* container = nullptr;
     public:
+    Cell(): state(EMPTY) {}
     Cell(char state): state(state) {}
     void setContainer(Container* newContainer) {container = newContainer;}
     void clearContainer() {container = nullptr;}
