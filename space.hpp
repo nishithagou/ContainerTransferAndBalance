@@ -11,8 +11,7 @@ class Space {
     Cell** cells;
     public:
     Space(int width, int height);
-    const int manhattanDistance(Coordinate start, Coordinate end);
-    std::vector<Coordinate> tryAllColumns(int column) const;
+    Cell getCell(int col, int row) const;
     
 };
 #endif

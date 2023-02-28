@@ -3,14 +3,17 @@
 Space::Space(int width, int height)
 {
     cells = new Cell*[width];
-    for (int i = 0; i < width; i++)
+    for (int i = 0; i < width; i++){
         cells[width] = new Cell[height];
+        cells[width][0] = Cell(UNOCCUPIABLE);
+    }
 }
 
-/// @brief If you were to try to bring
-/// @param column
-/// @return
-std::vector<Coordinate> Space::tryAllColumns(int column) const
+/// @brief Gets a cell. No bounds checking
+/// @param col 
+/// @param row 
+/// @return The cell at the col and row
+Cell Space::getCell(int col, int row) const
 {
-    return std::vector<Coordinate>();
+    return cells[col][row];
 }
