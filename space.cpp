@@ -47,3 +47,28 @@ void Space::removeContainer(int col, int row)
         throw 9;
     cells[col][row] = Cell(EMPTY);
 }
+
+void Space::setCell(int col, int row, Cell &cell)
+{
+    cells[col][row] = cell;
+}
+
+int Space::getWidth() const
+{
+    return width;
+}
+
+int Space::getHeight() const
+{
+    return height;
+}
+
+Space::~Space()
+{
+    delete[] stackHeights;
+    // this is how you deallocate a 2D array
+    for (int i = 0; i < width; i++){
+        delete[] cells[i];
+    }
+    delete[] cells;
+}

@@ -9,14 +9,17 @@
 class Space {
     private:
     int width, height;
-    Cell** cells;
-    int* stackHeights;
+    Cell** cells = nullptr;
+    int* stackHeights = nullptr;
     public:
     Space(int width, int height);
     Cell getCell(int col, int row) const;
     void setAsHull(int col, int row);
     void addContainer(int col, int row, Container* container);
     void removeContainer(int col, int row);
+    void setCell(int col, int row, Cell& cell);
+    int getWidth() const;
+    int getHeight() const;
     // rule of Three
     ~Space();
     Space(const Space& rhs);
