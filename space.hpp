@@ -8,10 +8,12 @@
 /// be blocked if it could be occupied by a container
 class Space {
     private:
+    int width, height;
     Cell** cells;
+    int* stackHeights;
     public:
     Space(int width, int height);
     Cell getCell(int col, int row) const;
-    
+    void setAsHull(int col, int row);
 };
 #endif
