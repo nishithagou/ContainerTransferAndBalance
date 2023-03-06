@@ -32,3 +32,18 @@ void Space::setAsHull(int col, int row)
     }
 }
 
+void Space::addContainer(int col, int row, Container* container)
+{
+    // TODO: Error Handling
+    if (cells[col][row].getState() != EMPTY)
+        throw 10;
+    cells[col][row].setState(OCCUPIED);
+    cells[col][row].setContainer(container);
+}
+
+void Space::removeContainer(int col, int row)
+{
+    if (cells[col][row].getState() != OCCUPIED)
+        throw 9;
+    cells[col][row] = Cell(EMPTY);
+}

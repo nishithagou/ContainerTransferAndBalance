@@ -1,6 +1,6 @@
 #ifndef SPACE_H
 #define SPACE_H
-#include <vector>
+#include <exception>
 #include "cell.hpp"
 #include "coordinate.hpp"
 /// @brief Space defines either the ship or the buffer. Now to make the math easier
@@ -15,5 +15,11 @@ class Space {
     Space(int width, int height);
     Cell getCell(int col, int row) const;
     void setAsHull(int col, int row);
+    void addContainer(int col, int row, Container* container);
+    void removeContainer(int col, int row);
+    // rule of Three
+    ~Space();
+    Space(const Space& rhs);
+    Space& operator=(const Space& rhs);
 };
 #endif
