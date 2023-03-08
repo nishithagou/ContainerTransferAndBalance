@@ -53,6 +53,14 @@ void Space::setCell(const int col, const int row, const Cell &cell)
     cells[col][row] = cell;
 }
 
+/// @brief Gets the height of the stack at a certain column. No bounds checking
+/// @param col 
+/// @return the stack height at the indicated column
+int Space::getStackHeight(const int col) const
+{
+    return stackHeights[col];
+}
+
 int Space::getWidth() const
 {
     return width;

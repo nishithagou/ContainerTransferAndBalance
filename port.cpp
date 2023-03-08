@@ -2,10 +2,10 @@
 
 /// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize 
-Port::Port(Coordinate shipSize): ship(Space(shipSize.x, shipSize.y)) {}
+Port::Port(Coordinate shipSize): ship(Space(shipSize.x, shipSize.y)), cranePosition{Coordinate(0,0)} {}
 
 /// @brief Default Constructer not really useful I think
-Port::Port(): ship(Space(0, 0)) {}
+Port::Port(): ship(Space(0, 0)), cranePosition{Coordinate(0,0)} {}
 
 /// @brief Calculates A*
 /// @return The asymptotically lower bound on the number of minutes to reach the solution
@@ -19,19 +19,30 @@ int Port::getTotalCost() const
 /// @param bufferSize 
 /// @param shipLoad 
 /// @param toLoad 
-Transfer::Transfer(const Coordinate shipSize, const Coordinate bufferSize, 
+Transfer::Transfer(
+    // parameters
+    const Coordinate shipSize, 
+    const Coordinate bufferSize, 
     const std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
     std::vector<Container*>& toLoad):
-        Port(shipSize),
-        buffer(Space(bufferSize.x, bufferSize.y))  
+    // Field Initialization
+    Port(shipSize),
+    buffer(Space(bufferSize.x, bufferSize.y))  
 {
     for (size_t i = 0; i < shipLoad.size(); i++){
         const Coordinate CO = shipLoad[i].second;
         ship.setCell(CO.x, CO.y, shipLoad[i].first);
-        if (shipLoad[i].first.getState() == OCCUPIED){
+        // handles where we have containers that need to be offloaded
+        if (shipLoad[i].first.getState() == OCCUPIED && shipLoad[i].first.getContainer()->isToBeOffloaded()){
             std::pair<ContainerCoordinate, Container*> containerToOffload 
                 (ContainerCoordinate(CO.x, CO.y), shipLoad[i].first.getContainer());
             toOffload.push_back(containerToOffload);
+        }
+        // handles where we have containers that just need to stay in the ship after the operation
+        if (shipLoad[i].first.getState() == OCCUPIED && !shipLoad[i].first.getContainer()->isToBeOffloaded()){
+            std::pair<ContainerCoordinate, Container*> containerToStay
+                (ContainerCoordinate(CO.x, CO.y), shipLoad[i].first.getContainer());
+            toOffload.push_back(containerToStay);
         }
     }
     // preallocate memory minor optimization
@@ -51,19 +62,45 @@ int Transfer::toHashIndex() const {
     return 0;
 }
 
-/// @brief TODO
-/// @return 
+/// @brief  Recall that our heuristic is admissible so long it never overestimates;
+/// however, that also means the heuristic is best when it is as close to the actual
+/// time but never overshooting it
+/// @return how close are we to the goal state in terms of minutes 
 int Transfer::calculateHeuristic() const
 {
-    // Recall that our heuristic is admissible so long it never overestimates
-    // however that also means
-    int minutesToLoad = toLoad.size() * 2;
-    int minutesToOffload = 0;
-    
-    // incredibly mediocre heuristic to be finetuned
 
+    // this is just the remaining number of containers that need to load. Will just
+    // assume all containers can just phase through one another
+    int minutesToLoad = toLoad.size() * 2;
+
+    // this is the remaining number of containers that need to offload 
+    // thanks to how we defined the coordinate system the manhattan distance is
+    // calculated the same for both the ship and buffer
+    int minutesToOffload = 0;
+    for (const std::pair<ContainerCoordinate, Container*>& p: toOffload) {
+        const ContainerCoordinate coord = p.first;
+        minutesToOffload += 2 + coord.x + coord.y;
+    }
+    
+    // for the edge case of having a container in the buffer that needs to be put
+    // back onto the ship. If the container that needs to stay on the ship is already
+    // on the ship, the heuristic for that will be 0
+    int minutesToMoveFromBufferToShip = 0;
+    for (const std::pair<ContainerCoordinate, Container*>& p: toStay) {
+        const ContainerCoordinate coord = p.first;
+        const Container* container = p.second;
+        if (coord.isInBuffer)
+            minutesToMoveFromBufferToShip += 4 + coord.x + coord.y;
+    }
+    // okay heuristic to be finetuned. Can certainly be better
+    // TODO: finetune
+    return minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
 }
 
+/// @brief Compares whether the transfer ports are logically identical. Not by
+/// comparing strings of containers but the states of the cells
+/// @param rhs 
+/// @return a boolean indicating logical equivalence
 bool Transfer::operator==(const Transfer& rhs) const{
     // find the first thing that is unequal
     // go through the ship's space
