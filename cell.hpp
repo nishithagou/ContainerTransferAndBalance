@@ -10,11 +10,11 @@ class Cell{
     Container* container = nullptr;
     public:
     Cell(): state(EMPTY) {}
-    Cell(char state): state(state) {}
-    void setContainer(Container* newContainer) {container = newContainer;}
+    Cell(const char state): state(state) {}
+    void setContainer( Container* newContainer) {container = newContainer;}
     void clearContainer() {container = nullptr;}
     Container* getContainer() const { return container; }
     char getState() const { return state; }
-    char setState(char newState) {state = newState;}
+    char setState(const char newState) {state = newState;}
 };
 #endif

@@ -25,12 +25,13 @@ class Port{
 };
 
 class Transfer: public Port{
+    private:
     Space buffer;
-    std::vector<Container*> toOffload;
-    std::vector<Container*> toLoad;
+    std::vector<std::pair<ContainerCoordinate, Container*>> toOffload;
+    std::vector<std::pair<ContainerCoordinate, Container*>> toLoad;
     public:
-    Transfer(Coordinate shipSize, Coordinate bufferSize, 
-        std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
+    Transfer(const Coordinate shipSize, const Coordinate bufferSize, 
+        const std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
         std::vector<Container*>& toLoad);
     int toHashIndex() const;
     bool operator==(const Transfer& rhs) const;

@@ -1,14 +1,14 @@
 #include "port.hpp"
 
-/// @brief It wants a constructer for an abstract class not sure why
+/// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize 
-Port::Port(Coordinate shipSize): ship(Space(shipSize.x, shipSize.y))
-{}
+Port::Port(Coordinate shipSize): ship(Space(shipSize.x, shipSize.y)) {}
 
-Port::Port(): ship(Space(0, 0))
-{
-}
+/// @brief Default Constructer not really useful I think
+Port::Port(): ship(Space(0, 0)) {}
 
+/// @brief Calculates A*
+/// @return The asymptotically lower bound on the number of minutes to reach the solution
 int Port::getTotalCost() const
 {
     return costToGetHere + calculateHeuristic();
@@ -19,20 +19,30 @@ int Port::getTotalCost() const
 /// @param bufferSize 
 /// @param shipLoad 
 /// @param toLoad 
-Transfer::Transfer(Coordinate shipSize, Coordinate bufferSize, 
-    std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
+Transfer::Transfer(const Coordinate shipSize, const Coordinate bufferSize, 
+    const std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
     std::vector<Container*>& toLoad):
-buffer(Space(bufferSize.x, bufferSize.y))
+        Port(shipSize),
+        buffer(Space(bufferSize.x, bufferSize.y))  
 {
-    ship = Space(shipSize.x, shipSize.y);
     for (size_t i = 0; i < shipLoad.size(); i++){
         const Coordinate CO = shipLoad[i].second;
         ship.setCell(CO.x, CO.y, shipLoad[i].first);
         if (shipLoad[i].first.getState() == OCCUPIED){
-            toOffload.push_back(shipLoad[i].first.getContainer());
+            std::pair<ContainerCoordinate, Container*> containerToOffload 
+                (ContainerCoordinate(CO.x, CO.y), shipLoad[i].first.getContainer());
+            toOffload.push_back(containerToOffload);
         }
     }
-    this->toLoad = toLoad;
+    // preallocate memory minor optimization
+    this->toLoad.reserve(toLoad.size());
+    // negative values are sentinel values that indicate the containers are not in the buffer
+    // nor the ship but rather on the trucks
+    const ContainerCoordinate notOnShip(-1, -1);
+    for (Container* c:toLoad){
+        std::pair<ContainerCoordinate, Container*> containerToLoad(notOnShip, c);
+        this->toLoad.push_back(containerToLoad);
+    }
 }
 
 /// @brief TODO
@@ -48,6 +58,10 @@ int Transfer::calculateHeuristic() const
     // Recall that our heuristic is admissible so long it never overestimates
     // however that also means
     int minutesToLoad = toLoad.size() * 2;
+    int minutesToOffload = 0;
+    
+    // incredibly mediocre heuristic to be finetuned
+
 }
 
 bool Transfer::operator==(const Transfer& rhs) const{

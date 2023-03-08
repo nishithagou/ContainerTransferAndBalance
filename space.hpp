@@ -12,12 +12,12 @@ class Space {
     Cell** cells = nullptr;
     int* stackHeights = nullptr;
     public:
-    Space(int width, int height);
-    Cell getCell(int col, int row) const;
-    void setAsHull(int col, int row);
-    void addContainer(int col, int row, Container* container);
-    void removeContainer(int col, int row);
-    void setCell(int col, int row, Cell& cell);
+    Space(const int width, const int height);
+    Cell getCell(const int col, const int row) const;
+    void setAsHull(const int col, const int row);
+    void addContainer(const int col, const int row, Container* container);
+    void removeContainer(const int col, const int row);
+    void setCell(const int col, const int row, const Cell& cell);
     int getWidth() const;
     int getHeight() const;
     // rule of Three
