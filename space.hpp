@@ -10,6 +10,8 @@ class Space {
     private:
     int width, height;
     Cell** cells = nullptr;
+    /// @brief a stackheight of 0 means no containers, 1 means 1 container and so on;
+    /// thus do not confuse stack height with the row coordinate in cells
     int* stackHeights = nullptr;
     public:
     Space(const int width, const int height);
@@ -18,6 +20,7 @@ class Space {
     void addContainer(const int col, const int row, Container* container);
     void removeContainer(const int col, const int row);
     void setCell(const int col, const int row, const Cell& cell);
+    int getStackHeight(const int col) const;
     int getWidth() const;
     int getHeight() const;
     // rule of Three
