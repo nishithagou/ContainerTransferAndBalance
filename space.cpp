@@ -88,10 +88,50 @@ Space::Space(const Space &rhs)
     
 }
 
-/// @brief Assignment constructer
+/// @brief TODO: Assignment constructer
 /// @param rhs 
 /// @return 
 Space &Space::operator=(const Space &rhs)
 {
     // TODO: insert return statement here
+}
+
+/// @brief Move constructor
+/// @param other 
+Space::Space(Space &&other)
+{
+    this->width = other.width;
+    this->height = other.height;
+    this->cells = other.cells;
+    this->stackHeights = other.stackHeights;
+    other.cells = nullptr;
+    other.stackHeights = nullptr;
+}
+
+/// @brief Move assignment
+/// @param rhs 
+/// @return a new Space object?
+Space &Space::operator=(Space &&rhs)
+{
+    if (this != &rhs){
+        this->width = rhs.width;
+        this->height = rhs.height;
+
+        // deallocate old data
+        delete[] stackHeights;
+        // this is how you deallocate a 2D array
+        for (int i = 0; i < width; i++){
+            delete[] cells[i];
+        }
+        delete[] cells;
+        
+        this->cells = rhs.cells;
+        rhs.cells = nullptr;
+        this->stackHeights = rhs.stackHeights;
+        rhs.stackHeights = nullptr;
+    }
+    return *this;
+    // I would like to thank and credit Sandesh from
+    // https://www.codementor.io/@sandesh87/the-rule-of-five-in-c-1pdgpzb04f
+    // for actually explaining the rule of five 
 }

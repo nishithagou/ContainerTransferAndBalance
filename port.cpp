@@ -2,10 +2,14 @@
 
 /// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize 
-Port::Port(Coordinate shipSize): ship(Space(shipSize.x, shipSize.y)), cranePosition{Coordinate(0,0)} {}
+Port::Port(const Coordinate& shipSize, const Coordinate& bufferSize): 
+ship(Space(shipSize.x, shipSize.y)), 
+buffer(Space(bufferSize.x, bufferSize.y)),
+cranePosition{Coordinate(0,0)}, craneState{SHIP} 
+{}
 
 /// @brief Default Constructer not really useful I think
-Port::Port(): ship(Space(0, 0)), cranePosition{Coordinate(0,0)} {}
+Port::Port(): ship(Space(0, 0)), buffer(Space(0, 0)), cranePosition{Coordinate(0,0)}, craneState{SHIP} {}
 
 /// @brief Calculates A*
 /// @return The asymptotically lower bound on the number of minutes to reach the solution
@@ -21,13 +25,12 @@ int Port::getTotalCost() const
 /// @param toLoad 
 Transfer::Transfer(
     // parameters
-    const Coordinate shipSize, 
-    const Coordinate bufferSize, 
+    const Coordinate& shipSize, 
+    const Coordinate& bufferSize, 
     const std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
     std::vector<Container*>& toLoad):
     // Field Initialization
-    Port(shipSize),
-    buffer(Space(bufferSize.x, bufferSize.y))  
+    Port(shipSize, bufferSize) 
 {
     for (size_t i = 0; i < shipLoad.size(); i++){
         const Coordinate CO = shipLoad[i].second;
@@ -97,6 +100,40 @@ int Transfer::calculateHeuristic() const
     return minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
 }
 
+/// @brief Calculates the Manhattan Distance between two points in the Port. Assumes
+/// parameters fed are actually real as this function does not check. Does not actually 
+/// move anything. Also factors in the move distance for crane when moving between spaces
+/// i.e. going from (0,0) on the ship takes 2 minutes to go to truck bay
+/// @param start 
+/// @param end 
+/// @param startSpace 
+/// @param endSpace 
+/// @return the Manhattan Distance between two points.
+int Transfer::calculateManhattanDistance(const Coordinate &start, const Coordinate &end, const char startSpace, const char endSpace) const
+{
+    // this is an "intraspace" transfer so to speak
+    if (startSpace == endSpace){
+        // actually the most complicated 
+    }
+    // this is an "interspace" transfer so like moving between the buffer/ship/truckbay
+    // actually made easier since the crane always has to go up to 0,0 coordinate
+    else {
+        if (startSpace == TRUCKBAY && endSpace == TRUCKBAY){
+            // illogical move throw error
+            throw 8;
+        }
+        // quite trivial
+        if (startSpace == TRUCKBAY ){
+            return end.x + end.y + 2;
+        }
+        if (endSpace == TRUCKBAY) {
+            return start.x + start.y + 2;
+        }
+        // only dealing with distance between ship and buffer also pretty trivial
+        return start.x + start.y + end.x + end.y + 4;
+    }
+}
+
 /// @brief Compares whether the transfer ports are logically identical. Not by
 /// comparing strings of containers but the states of the cells
 /// @param rhs 
@@ -118,4 +155,11 @@ bool Transfer::operator==(const Transfer& rhs) const{
         }
     }
     return true;
+}
+
+/// @brief 
+/// @return 
+std::list<Port*> Transfer::tryAllOperators() const {
+    std::list<Port*> acc;
+    return acc;
 }
