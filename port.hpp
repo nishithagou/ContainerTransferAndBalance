@@ -45,7 +45,7 @@ class Transfer: public Port{
     std::list<Port*> tryAllOperators() const;
     private:
     int calculateHeuristic() const;
-    int calculateManhattanDistance(const Coordinate& start, const Coordinate& end, 
+    int calculateManhattanDistance(const ContainerCoordinate& start, const ContainerCoordinate& end, 
         const char startSpace, const char endSpace) const;
 };
 #endif

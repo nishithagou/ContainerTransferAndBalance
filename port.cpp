@@ -109,11 +109,26 @@ int Transfer::calculateHeuristic() const
 /// @param startSpace 
 /// @param endSpace 
 /// @return the Manhattan Distance between two points.
-int Transfer::calculateManhattanDistance(const Coordinate &start, const Coordinate &end, const char startSpace, const char endSpace) const
+int Transfer::calculateManhattanDistance(const ContainerCoordinate &start, const ContainerCoordinate &end, const char startSpace, const char endSpace) const
 {
     // this is an "intraspace" transfer so to speak
     if (startSpace == endSpace){
         // actually the most complicated 
+        int xMove = start.x - end.x;
+        // go left
+        if (xMove > 0){
+            int acc = 0;
+            int y = start.y;
+            for (int x = start.x; x > end.x; x--){
+                // TODO
+            }
+            return acc;
+        }
+        if (xMove < 0){}
+        if (xMove == 0){
+            // invalid move option 
+            throw 8;
+        }
     }
     // this is an "interspace" transfer so like moving between the buffer/ship/truckbay
     // actually made easier since the crane always has to go up to 0,0 coordinate
