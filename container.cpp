@@ -9,3 +9,8 @@ const int Container::getWeight() const
 {
     return weight;
 }
+
+const bool Container::isToBeOffloaded() const
+{
+    return toOffload;
+}

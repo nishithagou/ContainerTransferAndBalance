@@ -8,18 +8,40 @@
 /// be blocked if it could be occupied by a container
 class Space {
     private:
+
+    // member variables 
+
     int width, height;
-    Cell** cells;
-    int* stackHeights;
+    Cell** cells = nullptr;
+    /// @brief a stackheight of 0 means no containers, 1 means 1 container and so on;
+    /// thus do not confuse stack height with the row coordinate in cells
+    int* stackHeights = nullptr;
+
     public:
-    Space(int width, int height);
-    Cell getCell(int col, int row) const;
-    void setAsHull(int col, int row);
-    void addContainer(int col, int row, Container* container);
-    void removeContainer(int col, int row);
-    // rule of Three
+
+    Space(const int width, const int height);
+    
+    // mutators 
+
+    void setAsHull(const int col, const int row);
+    void addContainer(const int col, const int row, Container* container);
+    void removeContainer(const int col, const int row);
+    void setCell(const int col, const int row, const Cell& cell);
+
+    // getters 
+
+    int getStackHeight(const int col) const;
+    int getWidth() const;
+    int getHeight() const;
+    Cell getCell(const int col, const int row) const;
+
+    // rule of five
+
     ~Space();
     Space(const Space& rhs);
     Space& operator=(const Space& rhs);
+    // move operations for rule of five
+    Space(Space&& other);
+    Space& operator=(Space&& rhs);
 };
 #endif
