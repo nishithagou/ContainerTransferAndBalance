@@ -3,27 +3,29 @@
 /// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize 
 Port::Port(const Coordinate& shipSize, const Coordinate& bufferSize): 
-ship(Space(shipSize.x, shipSize.y)), 
-buffer(Space(bufferSize.x, bufferSize.y)),
-cranePosition{Coordinate(0,0)}, craneState{SHIP} 
+    // field initialization
+    ship(Space(shipSize.x, shipSize.y)), 
+    buffer(Space(bufferSize.x, bufferSize.y)),
+    cranePosition{Coordinate(0,0)}, craneState{SHIP}, costToGetHere{0}
 {}
 
 /// @brief Default Constructer not really useful I think
-Port::Port(): ship(Space(0, 0)), buffer(Space(0, 0)), cranePosition{Coordinate(0,0)}, craneState{SHIP} {}
+Port::Port(): ship(Space(0, 0)), buffer(Space(0, 0)), 
+    cranePosition{Coordinate(0,0)}, craneState{SHIP}, costToGetHere{0} {}
 
 /// @brief Will be useful for sorting. Sorts by the Port's internal cost
 /// @param rhs 
 /// @return whether this Port's cost is less than rhs's cost
 const bool Port::operator<(const Port &rhs) const
 {
-    return costToGetHere < rhs.costToGetHere;
+    return aStarCost < rhs.aStarCost;
 }
 
 /// @brief Calculates A*
 /// @return The asymptotically lower bound on the number of minutes to reach the solution
-int Port::getTotalCost() const
+void Port::calculateAStar()
 {
-    return costToGetHere + calculateHeuristic();
+    aStarCost = costToGetHere + calculateHeuristic();
 }
 
 /// @brief Returns the move description
@@ -75,6 +77,7 @@ Transfer::Transfer(
 }
 
 /// @brief TODO
+/// I think this implementation is incorrect
 /// @return 
 int Transfer::toHashIndex() const {
     return 0;
@@ -124,7 +127,7 @@ int Transfer::calculateHeuristic() const
 /// @param startSpace 
 /// @param endSpace 
 /// @return the Manhattan Distance between two points.
-int Transfer::calculateManhattanDistance(const ContainerCoordinate &start, 
+int Port::calculateManhattanDistance(const ContainerCoordinate &start, 
     const ContainerCoordinate &end, 
     const char startSpace, 
     const char endSpace) const
@@ -188,11 +191,11 @@ int Transfer::calculateManhattanDistance(const ContainerCoordinate &start,
     }
 }
 
-/// @brief Compares whether the transfer ports are logically identical. Not by
+/// @brief Compares whether the ports are logically identical. Not by
 /// comparing strings of containers but the states of the cells
 /// @param rhs 
 /// @return a boolean indicating logical equivalence
-bool Transfer::operator==(const Transfer& rhs) const{
+bool Port::operator==(const Port& rhs) const{
     if (craneState != rhs.craneState){
         return false;
     }
@@ -217,9 +220,54 @@ bool Transfer::operator==(const Transfer& rhs) const{
     return true;
 }
 
-/// @brief 
+/// @brief TODO this requires thought
+/// This function needs to 
+/// 1. generate all valid Transfer translations including some just moving the crane w/o
+/// container
+/// 2. Call to calculate the cost with A*
 /// @return 
-std::list<Port*> Transfer::tryAllOperators() const {
+std::list<Port*>& Transfer::tryAllOperators() const {
     std::list<Port*> acc;
+    // yo know I'm legit when I use a switch statement
+    switch (craneState)
+    {
+        case SHIP:{
+            break;
+        }
+        case BUFFER:{
+            break;
+        }
+        case TRUCKBAY:{
+            const ContainerCoordinate TRUCK(0, 0);
+            // if the crane is at the truck bay, if there are no containers to load
+            // just move the
+            // crane to all valid spaces which are positions which have a container
+            if (toLoad.size() == 0){
+                // see if stackHeights are greater than 0 which indicates a container
+                // for buffer
+                for (int i = 0; i < buffer.getWidth(); i++){
+                    if (buffer.getStackHeight(i) > 0){
+                        // let's hope the copy constructor works
+                        Transfer* deriv = new Transfer(*this);
+                        const ContainerCoordinate NEW_COORD = ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                        int translationMove = calculateManhattanDistance(TRUCK, NEW_COORD,
+                            TRUCKBAY, BUFFER);
+                        deriv->craneState = BUFFER;
+                        deriv->cranePosition = NEW_COORD;
+                        deriv->costToGetHere += translationMove;
+                        deriv->calculateAStar();
+                    }
+                }
+            }
+            // if there are still containers to load we must add moving the crane empty
+            // like with the previous lift statement
+            // and moving the crane with a container to all empty, availble spots in the ship
+            // and bufer
+            else {
+
+            }
+            break;
+        }
+    }
     return acc;
 }

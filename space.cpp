@@ -21,6 +21,11 @@ Cell Space::getCell(const int col, const int row) const
     return cells[col][row];
 }
 
+const char Space::getCellState(const int col, const int row) const
+{
+    return cells[col][row].getState();
+}
+
 /// @brief Sets a cell like with a ship as a hull thus limiting stack height
 /// @param col 
 /// @param row 

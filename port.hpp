@@ -18,22 +18,30 @@ class Port{
     std::string moveDescription;
     Coordinate cranePosition;
     char craneState;
+    /// @brief the number of minutes it took to reach this Port i.e. g(n)
     int costToGetHere;
+    /// @brief The lower bound number of minutes it has taken and will take for the Port to
+    /// finish
+    int aStarCost;
     Space ship;
     Space buffer;
     public:
     Port();
     Port(const Coordinate& shipSize, const Coordinate& bufferSize);
     virtual int toHashIndex() const = 0;
-    virtual bool operator==(const Port& rhs) const = 0;
+    virtual bool operator==(const Port& rhs) const;
     const bool operator<(const Port& rhs) const;
-    virtual std::list<Port*> tryAllOperators() const = 0;
-    int getTotalCost() const;
+    virtual std::list<Port*>& tryAllOperators() const = 0;
+    void calculateAStar();
     const std::string& getMoveDescription() const;
+
     protected:
     virtual int calculateHeuristic() const = 0;
+    int calculateManhattanDistance(const ContainerCoordinate& start, const ContainerCoordinate& end, 
+        const char startSpace, const char endSpace) const;
 };
 
+/// @brief For transfer operations of the abstract Port class
 class Transfer: public Port{
     private:
     std::vector<std::pair<ContainerCoordinate, Container*>> toOffload;
@@ -45,11 +53,9 @@ class Transfer: public Port{
         const std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
         std::vector<Container*>& toLoad);
     int toHashIndex() const;
-    bool operator==(const Transfer& rhs) const;
-    std::list<Port*> tryAllOperators() const;
+    std::list<Port*>& tryAllOperators() const;
     private:
     int calculateHeuristic() const;
-    int calculateManhattanDistance(const ContainerCoordinate& start, const ContainerCoordinate& end, 
-        const char startSpace, const char endSpace) const;
+    
 };
 #endif
