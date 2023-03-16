@@ -14,6 +14,8 @@ enum CraneState {SHIP, BUFFER, TRUCKBAY};
 class Port{
     // cost defined as minutes i.e. Manhattan Distance
     protected:
+    /// @brief describes the move done; only to be modified in tryAllOperators
+    std::string moveDescription;
     Coordinate cranePosition;
     char craneState;
     int costToGetHere;
@@ -24,8 +26,10 @@ class Port{
     Port(const Coordinate& shipSize, const Coordinate& bufferSize);
     virtual int toHashIndex() const = 0;
     virtual bool operator==(const Port& rhs) const = 0;
+    const bool operator<(const Port& rhs) const;
     virtual std::list<Port*> tryAllOperators() const = 0;
     int getTotalCost() const;
+    const std::string& getMoveDescription() const;
     protected:
     virtual int calculateHeuristic() const = 0;
 };

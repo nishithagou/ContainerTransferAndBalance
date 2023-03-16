@@ -11,11 +11,26 @@ cranePosition{Coordinate(0,0)}, craneState{SHIP}
 /// @brief Default Constructer not really useful I think
 Port::Port(): ship(Space(0, 0)), buffer(Space(0, 0)), cranePosition{Coordinate(0,0)}, craneState{SHIP} {}
 
+/// @brief Will be useful for sorting. Sorts by the Port's internal cost
+/// @param rhs 
+/// @return whether this Port's cost is less than rhs's cost
+const bool Port::operator<(const Port &rhs) const
+{
+    return costToGetHere < rhs.costToGetHere;
+}
+
 /// @brief Calculates A*
 /// @return The asymptotically lower bound on the number of minutes to reach the solution
 int Port::getTotalCost() const
 {
     return costToGetHere + calculateHeuristic();
+}
+
+/// @brief Returns the move description
+/// @return const string type
+const std::string &Port::getMoveDescription() const
+{
+    return moveDescription;
 }
 
 /// @brief Lots of arguments, but it's for a good reason
@@ -109,25 +124,49 @@ int Transfer::calculateHeuristic() const
 /// @param startSpace 
 /// @param endSpace 
 /// @return the Manhattan Distance between two points.
-int Transfer::calculateManhattanDistance(const ContainerCoordinate &start, const ContainerCoordinate &end, const char startSpace, const char endSpace) const
+int Transfer::calculateManhattanDistance(const ContainerCoordinate &start, 
+    const ContainerCoordinate &end, 
+    const char startSpace, 
+    const char endSpace) const
 {
     // this is an "intraspace" transfer so to speak
     if (startSpace == endSpace){
-        // actually the most complicated 
-        int xMove = start.x - end.x;
-        // go left
-        if (xMove > 0){
-            int acc = 0;
-            int y = start.y;
-            for (int x = start.x; x > end.x; x--){
-                // TODO
-            }
-            return acc;
+        // are we in the buffer or ship
+        const Space* currSpace;
+        if (start.isInBuffer){
+            currSpace = &buffer;
         }
-        if (xMove < 0){}
-        if (xMove == 0){
-            // invalid move option 
-            throw 8;
+        else{
+            currSpace = &ship;
+        }
+        // actually the most complicated 
+        const int toMoveX = start.x - end.x;
+        const int SPACE_HEIGHT = currSpace->getHeight();
+        if (toMoveX > 0){
+            // need to decrement x
+            int minDepth = start.y;
+            for (int x = start.x; x >= end.x; x--){
+                const int minClearance = SPACE_HEIGHT - currSpace->getStackHeight(x);
+                if (minDepth <= minClearance)
+                    minDepth = minClearance;
+            }
+            return ( start.y - minDepth) + toMoveX + (end.y - minDepth);           
+        }
+        if (toMoveX < 0){
+            // I have failed for I am writing boilerplate please forgive me as 
+            // ctrl-C and ctrl-V and minorly tweak the code
+            // need to increment x
+            int minDepth = start.y;
+            for (int x = start.x; x <= end.x; x++){
+                const int minClearance = SPACE_HEIGHT - currSpace->getStackHeight(x);
+                if (minDepth <= minClearance)
+                    minDepth = minClearance;
+            }
+            return ( start.y - minDepth) + (-toMoveX) + (end.y - minDepth); 
+        }
+        else{
+            // why are you trying to move within the same column?
+            throw 6;
         }
     }
     // this is an "interspace" transfer so like moving between the buffer/ship/truckbay
@@ -154,6 +193,12 @@ int Transfer::calculateManhattanDistance(const ContainerCoordinate &start, const
 /// @param rhs 
 /// @return a boolean indicating logical equivalence
 bool Transfer::operator==(const Transfer& rhs) const{
+    if (craneState != rhs.craneState){
+        return false;
+    }
+    if (cranePosition != rhs.cranePosition){
+        return false;
+    }
     // find the first thing that is unequal
     // go through the ship's space
     for (int row = 0; row < ship.getHeight(); row++){
