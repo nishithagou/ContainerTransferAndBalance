@@ -39,11 +39,11 @@ void Space::setAsHull(const int col, const int row)
 
 void Space::addContainer(const int col, const int row, Container* container)
 {
-    // TODO: Error Handling
     if (cells[col][row].getState() != EMPTY)
         throw 10;
     cells[col][row].setState(OCCUPIED);
     cells[col][row].setContainer(container);
+    stackHeights[col] = height - row;
 }
 
 void Space::removeContainer(const int col, const int row)
@@ -51,6 +51,7 @@ void Space::removeContainer(const int col, const int row)
     if (cells[col][row].getState() != OCCUPIED)
         throw 9;
     cells[col][row] = Cell(EMPTY);
+    stackHeights[col]--;
 }
 
 void Space::setCell(const int col, const int row, const Cell &cell)
@@ -64,6 +65,19 @@ void Space::setCell(const int col, const int row, const Cell &cell)
 int Space::getStackHeight(const int col) const
 {
     return stackHeights[col];
+}
+
+/// @brief sorely needed
+/// @param col 
+/// @return 
+Cell Space::getTopPhysicalCell(const int col) const
+{
+    if (stackHeights[col] == 0){
+        return Cell(EMPTY); // no physical cell
+    }
+    else{
+        return cells[col][height - stackHeights[col]];
+    }
 }
 
 int Space::getWidth() const

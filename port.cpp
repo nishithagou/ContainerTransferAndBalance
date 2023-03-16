@@ -238,6 +238,8 @@ std::list<Port*>& Transfer::tryAllOperators() const {
             break;
         }
         case TRUCKBAY:{
+            // Truck coordinate can actually be whatever because manhattan distance transitions ignores it because
+            // it is in a TRUCKBAY state
             const ContainerCoordinate TRUCK(0, 0);
             // if the crane is at the truck bay, if there are no containers to load
             // just move the
@@ -250,12 +252,29 @@ std::list<Port*>& Transfer::tryAllOperators() const {
                         // let's hope the copy constructor works
                         Transfer* deriv = new Transfer(*this);
                         const ContainerCoordinate NEW_COORD = ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
-                        int translationMove = calculateManhattanDistance(TRUCK, NEW_COORD,
-                            TRUCKBAY, BUFFER);
+                        int translationMove = calculateManhattanDistance(TRUCK, NEW_COORD, TRUCKBAY, BUFFER);
                         deriv->craneState = BUFFER;
                         deriv->cranePosition = NEW_COORD;
                         deriv->costToGetHere += translationMove;
                         deriv->calculateAStar();
+                        // I am not sure if the inheritance with pointers work gettin' some CS12 flashbacks
+                        acc.push_back(deriv);
+                    }
+                }
+                // for ship
+                // do not move crane to a HULL or empty position
+                for (int i = 0; i < ship.getWidth(); i++){
+                    if (ship.getStackHeight(i) > 0 ){
+                        // let's hope the copy constructor works
+                        Transfer* deriv = new Transfer(*this);
+                        const ContainerCoordinate NEW_COORD = ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                        int translationMove = calculateManhattanDistance(TRUCK, NEW_COORD, TRUCKBAY, BUFFER);
+                        deriv->craneState = BUFFER;
+                        deriv->cranePosition = NEW_COORD;
+                        deriv->costToGetHere += translationMove;
+                        deriv->calculateAStar();
+                        // I am not sure if the inheritance with pointers work gettin' some CS12 flashbacks
+                        acc.push_back(deriv);
                     }
                 }
             }

@@ -31,6 +31,7 @@ class Space {
     // getters 
 
     int getStackHeight(const int col) const;
+    Cell getTopPhysicalCell(const int col) const;
     int getWidth() const;
     int getHeight() const;
     Cell getCell(const int col, const int row) const;
