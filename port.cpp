@@ -181,7 +181,7 @@ Transfer *Transfer::createDerivatative(Container *container, const Coordinate &e
     return deriv;
 }
 
-/// @brief
+/// @brief Updates the relevant internal vectors
 /// @param container
 /// @param newPosition
 /// @param newSpace
@@ -381,23 +381,102 @@ std::list<Port *> &Transfer::tryAllOperators() const
     {
     case SHIP:
     {
-        // the most complex case out of all spaces because 
 
         // there is the initial case where the crane starts at 0,0 in the ship space
-        if (cranePosition == Coordinate(0, 0)){
-
-        }
-        else{
-            // crane should be at an container occupied cell 
-            if (ship.getCell(cranePosition.x, cranePosition.y).getState() != OCCUPIED){
-                throw 5;
+        // which means no containers
+        if (cranePosition == Coordinate(0, 0))
+        {
+            // just moving crane itself only to another container in the ship
+            for (int i = 0; i < ship.getWidth(); i++)
+            {
+                if (ship.getStackHeight(i) > 0 &&
+                    ship.getTopPhysicalCell(i).getState() != HULL)
+                {
+                    // to create a new ContainerCoordinate in the ship
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
+                }
+            }
+            // just moving crane itself only to another container in buffer
+            for (int i = 0; i < buffer.getWidth(); i++)
+            {
+                if (buffer.getStackHeight(i) > 0)
+                {
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                    acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
+                }
+            }
+            if (toLoad.size() != 0){
+                // also try moving the crane empty to truck bay
+                acc.push_back(createDerivatative(nullptr, Coordinate(0,0), TRUCKBAY));
             }
             
-            Container* toMove = ship.getCell(cranePosition.x, cranePosition.y).getContainer();
-            // is the crane at container that can be offloaded?
-            if (toMove->isToBeOffloaded()){
-                acc.push_back(createDerivatative(toMove, Coordinate(0, 0), TRUCKBAY));
+        }
+        else
+        {
+            // crane should be at an container occupied cell
+            if (ship.getCell(cranePosition.x, cranePosition.y).getState() != OCCUPIED)
+            {
+                throw 5;
             }
+
+            Container *toMove = ship.getCell(cranePosition.x, cranePosition.y).getContainer();
+
+            // is the crane at container that can be offloaded? Don't bother trying to move the container to
+            // the buffer or another position on the ship
+            if (toMove->isToBeOffloaded())
+            {
+                acc.push_back(createDerivatative(toMove, Coordinate(0, 0), TRUCKBAY));
+                break;
+            }
+            // try moving container to another position in the ship
+            for (int i = 0; i < ship.getWidth(); i++)
+            {
+                if (ship.getStackHeight(i) < ship.getHeight() - 1)
+                {
+                    // to create a new ContainerCoordinate in the ship
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
+                }
+            }
+            // may be excessive and an open opportunity for optimization
+            // but for now try moving the container to all positions in the buffer
+            // apologies more boilerplate for transfering a container to the ship
+            for (int i = 0; i < buffer.getWidth(); i++)
+            {
+                if (buffer.getStackHeight(i) < buffer.getHeight() - 1)
+                {
+                    // to create a new ContainerCoordinate in the ship
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                    acc.push_back(createDerivatative(toMove, NEW_COORD, BUFFER));
+                }
+            }
+
+            // just moving crane itself only to another container in the ship
+            for (int i = 0; i < ship.getWidth(); i++)
+            {
+                if (ship.getStackHeight(i) > 0 &&
+                    ship.getTopPhysicalCell(i).getState() != HULL)
+                {
+                    // to create a new ContainerCoordinate in the ship
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
+                }
+            }
+            // just moving crane itself only to another container in buffer
+            for (int i = 0; i < buffer.getWidth(); i++)
+            {
+                if (buffer.getStackHeight(i) > 0)
+                {
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                    acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
+                }
+            }
+            if (toLoad.size() != 0){
+                // also try moving the crane empty to truck bay
+                acc.push_back(createDerivatative(nullptr, Coordinate(0,0), TRUCKBAY));
+            }
+            
         }
         break;
     }
@@ -421,10 +500,11 @@ std::list<Port *> &Transfer::tryAllOperators() const
         // move container to ship or truck if applicable
         // move container to ship
 
-        // why would a container destined to be offloaded be in the buffer? Obviously it's best if the to be 
+        // why would a container destined to be offloaded be in the buffer? Obviously it's best if the to be
         // offloaded containers never reach the buffer
-        if (toMove->isToBeOffloaded()){
-            acc.push_back(createDerivatative(toMove, Coordinate(0,0), TRUCKBAY));
+        if (toMove->isToBeOffloaded())
+        {
+            acc.push_back(createDerivatative(toMove, Coordinate(0, 0), TRUCKBAY));
             break;
         }
         for (int i = 0; i < ship.getWidth(); i++)
@@ -438,12 +518,13 @@ std::list<Port *> &Transfer::tryAllOperators() const
                 acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
             }
         }
-        
+
         // or try moving crane by itself to another container-OCCUPIED position in the buffer and ship
         // and to the truckbay
-        
+
         // just moving crane itself only to another container in buffer
-        for (int i = 0; i < buffer.getWidth(); i++){
+        for (int i = 0; i < buffer.getWidth(); i++)
+        {
             if (buffer.getStackHeight(i) > 0)
             {
                 const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
@@ -469,7 +550,7 @@ std::list<Port *> &Transfer::tryAllOperators() const
     }
     case TRUCKBAY:
     {
-        
+
         // if the crane is at the truck bay, if there are no containers to load
         // just move the
         // crane to all valid spaces which are positions which have a container
