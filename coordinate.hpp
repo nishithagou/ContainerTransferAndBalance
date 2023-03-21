@@ -11,6 +11,8 @@ struct Coordinate{
     /// @return a boolean whether Coordinates are equal
     virtual bool operator!=(const Coordinate& rhs) const 
         { return (rhs.x != x) || (rhs.y != y); }
+    virtual bool operator==(const Coordinate& rhs) const
+        { return (rhs.x == x) && (rhs.y == y); }
 };
 
 /// @brief Ok it might be helpful for transfer if I knew which containers are in the buffer

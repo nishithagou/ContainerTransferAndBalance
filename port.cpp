@@ -122,38 +122,125 @@ int Transfer::calculateHeuristic() const
     return minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
 }
 
-/// @brief Just moves the crane and container if applicable. Does nothing else. Help cut down on the boilerplate
+/// @brief Just moves the crane and container if applicable and updates the toOffload and toStay vectors.
+/// Does nothing else. Help cut down on the boilerplate
 /// @param container a container; nullptr if just moving the crane
-/// @param start 
-/// @param end 
-/// @param startSpace 
-/// @param endSpace 
-void Transfer::moveContainerAndCrane(Container *container, const Coordinate &start, const Coordinate &end, 
-    const char startSpace, const char endSpace)
+/// @param start
+/// @param end
+/// @param startSpace
+/// @param endSpace
+void Transfer::moveContainerAndCrane(Container *container, const Coordinate &start, const Coordinate &end,
+                                     const char startSpace, const char endSpace)
 {
     // just moving the crane
-    if (container == nullptr){
+    if (container == nullptr)
+    {
         cranePosition = end;
         craneState = endSpace;
     }
     // moving the crane and the container c
-    else{
+    else
+    {
         cranePosition = end;
         craneState = endSpace;
         // add container at end
-        if (endSpace == BUFFER){
+        if (endSpace == BUFFER)
+        {
             buffer.addContainer(end.x, end.y, container);
         }
-        else if (endSpace == SHIP){
+        else if (endSpace == SHIP)
+        {
             ship.addContainer(end.x, end.y, container);
         }
+        updateContainerCoordinateVectors(container, end, endSpace);
         // remove container at beginning
-        if (startSpace == BUFFER){
+        if (startSpace == BUFFER)
+        {
             buffer.removeContainer(end.x, end.y);
         }
-        else if (startSpace == SHIP){
+        else if (startSpace == SHIP)
+        {
             ship.removeContainer(end.x, end.y);
         }
+    }
+}
+
+/// @brief Creates and returns a new Transfer port based off the parameters and the existing Transport object
+/// calling it
+/// @param container
+/// @param end
+/// @param endSpace
+/// @return
+Transfer *Transfer::createDerivatative(Container *container, const Coordinate &end, const char endSpace) const
+{
+    Transfer *deriv = new Transfer(*this);
+    int translationMove = calculateManhattanDistance(cranePosition, end, craneState, endSpace);
+    deriv->moveContainerAndCrane(container, cranePosition, end, craneState, endSpace);
+    deriv->costToGetHere += translationMove;
+    deriv->calculateAStar();
+    return deriv;
+}
+
+/// @brief
+/// @param container
+/// @param newPosition
+/// @param newSpace
+void Transfer::updateContainerCoordinateVectors(Container *container, const Coordinate &newPosition, const char newSpace)
+{
+    if (container->isToBeOffloaded())
+    {
+        // search for toOffload
+        for (size_t i = 0; i < toOffload.size(); i++)
+        {
+            if (toOffload[i].second == container)
+            {
+                // is the offloaded container now in the trucks?
+                if (newSpace == TRUCKBAY)
+                {
+                    toOffload.erase(toOffload.begin() + i);
+                    return;
+                }
+
+                ContainerCoordinate NEW_COORD(newPosition.x, newPosition.y);
+                if (newSpace == BUFFER)
+                    NEW_COORD.isInBuffer = true;
+                else
+                    NEW_COORD.isInBuffer = false;
+
+                toOffload[i].first = NEW_COORD;
+                return;
+            }
+        }
+        // did not find the appropriate container throw exception
+        throw 5;
+    }
+    else
+    {
+        // search for toStay
+        for (size_t i = 0; i < toStay.size(); i++)
+        {
+            if (toStay[i].second == container)
+            {
+
+                ContainerCoordinate NEW_COORD(newPosition.x, newPosition.y);
+                if (newSpace == BUFFER)
+                    NEW_COORD.isInBuffer = true;
+                else
+                    NEW_COORD.isInBuffer = false;
+
+                toStay[i].first = NEW_COORD;
+                return;
+            }
+        }
+        // did not find the new container so will add to toStay
+        // assuming it was properly pulled from
+        ContainerCoordinate NEW_COORD(newPosition.x, newPosition.y);
+        if (newSpace == BUFFER)
+            NEW_COORD.isInBuffer = true;
+        else
+            NEW_COORD.isInBuffer = false;
+        std::pair<ContainerCoordinate, Container *> toAdd(NEW_COORD, container);
+        toStay.push_back(toAdd);
     }
 }
 
@@ -294,15 +381,32 @@ std::list<Port *> &Transfer::tryAllOperators() const
     {
     case SHIP:
     {
+        // the most complex case out of all spaces because 
+
+        // there is the initial case where the crane starts at 0,0 in the ship space
+        if (cranePosition == Coordinate(0, 0)){
+
+        }
+        else{
+            // crane should be at an container occupied cell 
+            if (ship.getCell(cranePosition.x, cranePosition.y).getState() != OCCUPIED){
+                throw 5;
+            }
+            
+            Container* toMove = ship.getCell(cranePosition.x, cranePosition.y).getContainer();
+            // is the crane at container that can be offloaded?
+            if (toMove->isToBeOffloaded()){
+                acc.push_back(createDerivatative(toMove, Coordinate(0, 0), TRUCKBAY));
+            }
+        }
         break;
     }
     case BUFFER:
     {
-        const Coordinate START_BUFFER_COORDINATE(cranePosition);
 
         // sanity check
-        if (buffer.getCell(START_BUFFER_COORDINATE.x, START_BUFFER_COORDINATE.y).getState()
-            != OCCUPIED){
+        if (buffer.getCell(cranePosition.x, cranePosition.y).getState() != OCCUPIED)
+        {
             // why is the crane in the position with no container?
             // makes no sense
             // should not be possible so throw exeption
@@ -310,156 +414,128 @@ std::list<Port *> &Transfer::tryAllOperators() const
         }
 
         // get container
-        Container* toMove = buffer.getCell(START_BUFFER_COORDINATE.x, START_BUFFER_COORDINATE.y).getContainer();
+        Container *toMove = buffer.getCell(cranePosition.x, cranePosition.y).getContainer();
+        // I'm just going to assume moving a container within the buffer is pointless
+        // Can't Prove it but I feel a good hunch
 
-        // move container within buffer or move to ship or if appicable, the truck bay
-        // or just move crane 
+        // move container to ship or truck if applicable
+        // move container to ship
 
-        for (int i = 0; i < buffer.getWidth(); i++){
-            if (i != START_BUFFER_COORDINATE.x && buffer.getStackHeight(i) < buffer.getHeight() - 1){
-                Transfer *deriv = new Transfer(*this);
-                
-                const ContainerCoordinate NEW_COORD =
-                    ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
-                
-                int translationMove = calculateManhattanDistance(START_BUFFER_COORDINATE, NEW_COORD, BUFFER, BUFFER);
-                // do not need to change the crane state
-                // deriv->craneState = BUFFER;
-                deriv->cranePosition = NEW_COORD;
-                deriv->costToGetHere += translationMove;
-                // make another derivative where it's just moving the crane not the container
-                Transfer* noMoveContainer = new Transfer(*deriv);
-                // remove the container at its original position 
-                deriv->buffer.removeContainer(START_BUFFER_COORDINATE.x, START_BUFFER_COORDINATE.y);
-                // update 
-                deriv->calculateAStar();
-                // I am not sure if the inheritance with pointers work gettin' some CS12 flashbacks
-                acc.push_back(deriv);
+        // why would a container destined to be offloaded be in the buffer? Obviously it's best if the to be 
+        // offloaded containers never reach the buffer
+        if (toMove->isToBeOffloaded()){
+            acc.push_back(createDerivatative(toMove, Coordinate(0,0), TRUCKBAY));
+            break;
+        }
+        for (int i = 0; i < ship.getWidth(); i++)
+        {
+            if (ship.getStackHeight(i) < ship.getHeight() - 1)
+            {
+
+                // to create a new ContainerCoordinate in the ship
+                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+
+                acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
             }
         }
         
+        // or try moving crane by itself to another container-OCCUPIED position in the buffer and ship
+        // and to the truckbay
+        
+        // just moving crane itself only to another container in buffer
+        for (int i = 0; i < buffer.getWidth(); i++){
+            if (buffer.getStackHeight(i) > 0)
+            {
+                const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
+            }
+        }
+
+        // just moving crane itself only to another container in the ship
+        for (int i = 0; i < ship.getWidth(); i++)
+        {
+            if (ship.getStackHeight(i) > 0 &&
+                ship.getTopPhysicalCell(i).getState() != HULL)
+            {
+                // to create a new ContainerCoordinate in the ship
+                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
+            }
+        }
+
+        // just move the crane to the Truckbay
+        acc.push_back(createDerivatative(nullptr, Coordinate(0, 0), TRUCKBAY));
         break;
     }
     case TRUCKBAY:
     {
-        // Truck coordinate can actually be whatever because manhattan distance transitions ignores it because
-        // it is in a TRUCKBAY state
-        const Coordinate TRUCK(0, 0);
+        
         // if the crane is at the truck bay, if there are no containers to load
         // just move the
         // crane to all valid spaces which are positions which have a container
-        // but do it for both if there are no containers and if there are 
+        // but do it for both if there are no containers and if there are
         // see if stackHeights are greater than 0 which indicates a container
         // for buffer
         for (int i = 0; i < buffer.getWidth(); i++)
         {
             if (buffer.getStackHeight(i) > 0)
             {
-                // let's hope the copy constructor works
-                Transfer *deriv = new Transfer(*this);
-                const ContainerCoordinate NEW_COORD = ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
-                int translationMove = calculateManhattanDistance(TRUCK, NEW_COORD, TRUCKBAY, BUFFER);
-                deriv->moveContainerAndCrane(nullptr, TRUCK, NEW_COORD, TRUCKBAY, BUFFER);
-                deriv->costToGetHere += translationMove;
-                deriv->calculateAStar();
-                // I am not sure if the inheritance with pointers work gettin' some CS12 flashbacks
-                acc.push_back(deriv);
+                const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
             }
         }
         // for ship
         // do not move crane to a HULL or empty position as that is pointless
         for (int i = 0; i < ship.getWidth(); i++)
         {
-            if (ship.getStackHeight(i) > 0 && 
+            if (ship.getStackHeight(i) > 0 &&
                 ship.getTopPhysicalCell(i).getState() != HULL)
             {
-                // let's hope the copy constructor works
-                Transfer *deriv = new Transfer(*this);
-                const ContainerCoordinate NEW_COORD =
-                    ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
-                int translationMove = calculateManhattanDistance(TRUCK, NEW_COORD, TRUCKBAY, SHIP);
-                deriv->moveContainerAndCrane(nullptr, TRUCK, NEW_COORD, TRUCKBAY, SHIP);
-                deriv->costToGetHere += translationMove;
-                deriv->calculateAStar();
-                // I am not sure if the inheritance with pointers work gettin' some CS12 flashbacks
-                acc.push_back(deriv);
+                // to create a new ContainerCoordinate in the ship
+                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+
+                acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
             }
         }
         // if there are still containers to load we must add moving the crane empty
         // like with the previous lift statement
         // and moving the crane with a container to all empty, availble spots in the ship
         // and bufer
-        if (toLoad.size() != 0){
-            // simulating taking one of the toLoad containers to all possible positions 
+        if (toLoad.size() != 0)
+        {
+            // simulating taking one of the toLoad containers to all possible positions
             // in ship and buffer
-            Container* toMove = toLoad.back().second;
-            std::vector<std::pair<ContainerCoordinate, Container*>> newToLoad;
-            for (std::pair<ContainerCoordinate, Container*> p:toLoad){
+            Container *toMove = toLoad.back().second;
+            std::vector<std::pair<ContainerCoordinate, Container *>> newToLoad;
+            for (std::pair<ContainerCoordinate, Container *> p : toLoad)
+            {
                 newToLoad.push_back(p);
             }
-            // remove toMove Container 
+            // remove toMove Container
             newToLoad.pop_back();
-            for (int i = 0; i < buffer.getWidth(); i++){
-                if (buffer.getStackHeight(i) < buffer.getHeight() - 1){
-
-                    Transfer *deriv = new Transfer(*this);
+            for (int i = 0; i < buffer.getWidth(); i++)
+            {
+                if (buffer.getStackHeight(i) < buffer.getHeight() - 1)
+                {
 
                     // to create a new ContainerCoordinate in the buffer
-                    const ContainerCoordinate NEW_COORD =
-                        ContainerCoordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
-                    
-                    // calculate such move to the new coordinate
-                    int translationMove = 
-                        calculateManhattanDistance(TRUCK, NEW_COORD, TRUCKBAY, BUFFER);
-                    
-                    deriv->moveContainerAndCrane(toMove, TRUCK, NEW_COORD, TRUCKBAY, BUFFER);
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
 
-
-                    // calculate g(n)
-                    deriv->costToGetHere += translationMove;
-                    
-                    // calculate A*
-                    deriv->calculateAStar();
-
-                    acc.push_back(deriv);
+                    acc.push_back(createDerivatative(toMove, NEW_COORD, BUFFER));
                 }
-
             }
-            
-            // apologies more boilerplate for transfering a container to the ship
-            for (int i = 0; i < ship.getWidth(); i++){
-                if (ship.getStackHeight(i) < ship.getHeight() - 1){
 
-                    Transfer *deriv = new Transfer(*this);
+            // apologies more boilerplate for transfering a container to the ship
+            for (int i = 0; i < ship.getWidth(); i++)
+            {
+                if (ship.getStackHeight(i) < ship.getHeight() - 1)
+                {
 
                     // to create a new ContainerCoordinate in the ship
-                    const ContainerCoordinate NEW_COORD =
-                        ContainerCoordinate(i, ship.getHeight() - ship.getStackHeight(i));
-                    
-                    // calculate such move to the new coordinate
-                    int translationMove = 
-                        calculateManhattanDistance(TRUCK, NEW_COORD, TRUCKBAY, SHIP);
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
 
-                    // move crane to ship 
-                    deriv->craneState = SHIP;
-                    deriv->cranePosition = NEW_COORD;
-
-                    // calculate g(n)
-                    deriv->costToGetHere += translationMove;
-                    
-                    // Create new cell with a container
-                    Cell containerCell(OCCUPIED);
-                    containerCell.setContainer(toMove);
-
-                    // Set the cell in the buffer to the new ContainerCell
-                    deriv->buffer.setCell(NEW_COORD.x, NEW_COORD.y, containerCell);
-
-                    // calculate A*
-                    deriv->calculateAStar();
-
-                    acc.push_back(deriv);
+                    acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
                 }
-
             }
         }
         break;

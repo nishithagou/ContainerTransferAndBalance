@@ -58,6 +58,7 @@ class Transfer: public Port{
     int calculateHeuristic() const;
     void moveContainerAndCrane(Container* c, const Coordinate& start, const Coordinate& end,  
         const char startSpace, const char endSpace);
-    
+    Transfer* createDerivatative(Container* c, const Coordinate& end, const char endSpace) const;
+    void updateContainerCoordinateVectors(Container* container, const Coordinate& newPosition, const char newSpace);
 };
 #endif
