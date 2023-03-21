@@ -18,5 +18,7 @@ struct Coordinate{
 struct ContainerCoordinate:public Coordinate{
     bool isInBuffer;
     ContainerCoordinate (const int x, const int y): Coordinate(x, y), isInBuffer{false} {}
+    ContainerCoordinate (const int x, const int y, const bool isInBuffer): 
+        Coordinate(x,y), isInBuffer(isInBuffer) {}
 };
 #endif

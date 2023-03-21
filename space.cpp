@@ -54,6 +54,8 @@ void Space::removeContainer(const int col, const int row)
     stackHeights[col]--;
 }
 
+
+
 void Space::setCell(const int col, const int row, const Cell &cell)
 {
     cells[col][row] = cell;
@@ -76,6 +78,7 @@ Cell Space::getTopPhysicalCell(const int col) const
         return Cell(EMPTY); // no physical cell
     }
     else{
+        // TODO Make sure this logic is correct
         return cells[col][height - stackHeights[col]];
     }
 }

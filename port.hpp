@@ -37,7 +37,7 @@ class Port{
 
     protected:
     virtual int calculateHeuristic() const = 0;
-    int calculateManhattanDistance(const ContainerCoordinate& start, const ContainerCoordinate& end, 
+    int calculateManhattanDistance(const Coordinate& start, const Coordinate& end, 
         const char startSpace, const char endSpace) const;
 };
 
@@ -56,6 +56,8 @@ class Transfer: public Port{
     std::list<Port*>& tryAllOperators() const;
     private:
     int calculateHeuristic() const;
+    void moveContainerAndCrane(Container* c, const Coordinate& start, const Coordinate& end,  
+        const char startSpace, const char endSpace);
     
 };
 #endif
