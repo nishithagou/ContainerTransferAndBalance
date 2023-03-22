@@ -13,7 +13,7 @@ struct Coordinate{
         { return (rhs.x != x) || (rhs.y != y); }
     virtual bool operator==(const Coordinate& rhs) const
         { return (rhs.x == x) && (rhs.y == y); }
-    std::string& toString() const {
+    std::string toString() const {
         // complier complains I think there is a more elegant solution but I'm too tired to 
         // look it up 
         std::string acc = "(";

@@ -77,14 +77,6 @@ Transfer::Transfer(
     }
 }
 
-/// @brief TODO
-/// I think this implementation is incorrect
-/// @return
-int Transfer::toHashIndex() const
-{
-    return 0;
-}
-
 /// @brief  Recall that our heuristic is admissible so long it never overestimates;
 /// however, that also means the heuristic is best when it is as close to the actual
 /// time but never overshooting it
@@ -137,7 +129,7 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
     {
         cranePosition = end;
         craneState = endSpace;
-        moveDescription += "\nMoving crane from " 
+        moveDescription += "\nMoving crane only from " 
             + toStringFromState(startSpace) + " " + start.toString() + " to " 
             + toStringFromState(endSpace) + " " + end.toString();
     }
@@ -165,6 +157,9 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
         {
             ship.removeContainer(end.x, end.y);
         }
+        moveDescription += "\nMoving container " + container->toString() + " from " 
+            + toStringFromState(startSpace) + " " + start.toString() + " to " 
+            + toStringFromState(endSpace) + " " + end.toString();
     }
 }
 
@@ -642,6 +637,81 @@ std::list<Port *> &Transfer::tryAllOperators() const
         }
         break;
     }
+    }
+    return acc;
+}
+
+/// @brief Gets a string representation of the Transfer port which basically boils down 
+/// that 0 is empty/unaccessible/Hull 
+/// that 1 is a container that needs to stay in the ship
+/// and 2 is a container that needs to be offloaded
+/// the representation is kindof flipped and is optimized not for understanding but for 
+/// hashing
+/// @return basic string representation
+const std::string &Transfer::toStringBasic() const
+{
+    std::string acc;
+    // small optimization
+    acc.reserve(buffer.getHeight() * (buffer.getWidth() + 1) + 
+        ship.getHeight() * (ship.getWidth() + 1));
+
+    std::string emptyBufferStack;
+    for (int i = 0; i < buffer.getHeight(); i++)
+        emptyBufferStack += "0";
+    emptyBufferStack += "\n";
+    
+    for (int i = 0; i < buffer.getWidth(); i++){
+        if (buffer.getStackHeight(i) == 0){
+            acc += emptyBufferStack;
+        }
+        else{
+            for (int j = 0; j < buffer.getHeight(); j++){
+                if (buffer.getCellState(i, j) == EMPTY ||
+                    buffer.getCellState(i, j) == UNOCCUPIABLE){
+                    acc += "0";
+                }
+                else if (buffer.getCellState(i, j) == OCCUPIED){
+                    if (buffer.getCell(i, j).getContainer()->isToBeOffloaded()){
+                        acc += "2";
+                    }
+                    else {
+                        acc += "1";
+                    }
+                }
+            }
+            acc += "\n";
+        }
+    }
+
+    std::string emptyShipStack;
+    for (int i = 0; i < buffer.getHeight(); i++)
+        emptyShipStack += "0";
+    emptyShipStack += "\n";
+
+    for (int i = 0; i < buffer.getWidth(); i++){
+        if (buffer.getStackHeight(i) == 0 || 
+            buffer.getTopPhysicalCell(i).getState() == HULL ||
+            buffer.getTopPhysicalCell(i).getState() == UNOCCUPIABLE){
+            acc += emptyShipStack;
+        }
+        else{
+            for (int j = 0; j < buffer.getHeight(); j++){
+                if (buffer.getCellState(i, j) == EMPTY || 
+                    buffer.getCellState(i, j) == HULL ||
+                    buffer.getCellState(i, j) == UNOCCUPIABLE){
+                    acc += "0";
+                }
+                else if (buffer.getCellState(i, j) == OCCUPIED){
+                    if (buffer.getCell(i, j).getContainer()->isToBeOffloaded()){
+                        acc += "2";
+                    }
+                    else {
+                        acc += "1";
+                    }
+                }
+            }
+            acc += "\n";
+        }
     }
     return acc;
 }
