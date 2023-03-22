@@ -1,5 +1,6 @@
 #include <iostream>
-#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
 #include "port.hpp"
 
 using namespace std;
@@ -25,8 +26,56 @@ int main(int argc, char** argv){
     toLoad.push_back(new Container("From truck 1", 100));
     toLoad.push_back(new Container("From truck 2", 200));
     
-    Transfer base(Coordinate(12,9), Coordinate(24, 5), shipLoad, toLoad);
-    string tostring = base.toStringBasic();
-    cout << tostring << endl;
+    // cannot use the stack data structure because I need to sort
+    // but stack functions pretty much like an actual stack as I in add to the top and pop
+    // from the top 
+    vector<Port*> stack;
+    Transfer* base = new Transfer(Coordinate(12,9), Coordinate(24, 5), shipLoad, toLoad);
+    // those who do not learn from history are doomed to repeat it literally
+    unordered_set<string> history;
+    history.insert(base->toStringBasic());
+    stack.push_back(base);
+    Port* solution = nullptr;
+    while(stack.size() > 0){    
+        if (stack.back()->isSolved()){
+            solution = stack.back();
+            break;
+        }
+
+        // expand cheapest node
+        list<Port*> derivs = stack.back()->tryAllOperators();
+
+        
+        stack.pop_back();
+        
+
+        // look through derivs
+        for (list<Port*>::iterator it = derivs.begin(); it != derivs.end(); ){
+            if (history.contains((*it)->toStringBasic())){
+                if (it == derivs.begin()){
+                    derivs.pop_front();
+                    it = derivs.begin();
+                    continue;
+                }
+                else if ((*it)==derivs.back()){
+                    derivs.pop_back();
+                    break;
+                }
+                list<Port*>::iterator next = it++;
+                it--;
+                // I don't feel so confident about not causing any memory leaks
+                derivs.erase(it);
+                it = next;
+            }
+            else{
+                stack.push_back((*it));
+                it++;
+            }
+        }
+
+        // sort
+        sort(stack.begin(), stack.end(), Port::greaterThan);
+    }
+    cout << solution->getMoveDescription() << endl;
     return 0;
 }

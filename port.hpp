@@ -25,6 +25,7 @@ class Port{
     /// @brief The lower bound number of minutes it has taken and will take for the Port to
     /// finish
     int aStarCost;
+    bool solved;
     Space ship;
     Space buffer;
     public:
@@ -32,12 +33,14 @@ class Port{
     Port(const Coordinate& shipSize, const Coordinate& bufferSize);
     virtual bool operator==(const Port& rhs) const;
     bool operator<(const Port& rhs) const;
+    static bool greaterThan(const Port* lhs, const Port* rhs);
     virtual std::list<Port*> tryAllOperators() const = 0;
     void calculateAStar();
     std::string getMoveDescription() const;
     virtual std::string toStringBasic() const = 0;
+    bool isSolved() const;
     protected:
-    virtual int calculateHeuristic() const = 0;
+    virtual int calculateHeuristic()  = 0;
     int calculateManhattanDistance(const Coordinate& start, const Coordinate& end, 
         const char startSpace, const char endSpace) const;
     static std::string toStringFromState(const char state);
@@ -57,7 +60,7 @@ class Transfer: public Port{
     std::list<Port*> tryAllOperators() const;
     virtual std::string toStringBasic() const;
     private:
-    int calculateHeuristic() const;
+    int calculateHeuristic();
     void moveContainerAndCrane(Container* c, const Coordinate& start, const Coordinate& end,  
         const char startSpace, const char endSpace);
     Transfer* createDerivatative(Container* c, const Coordinate& end, const char endSpace) const;

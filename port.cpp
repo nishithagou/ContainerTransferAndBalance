@@ -9,6 +9,7 @@ Port::Port(const Coordinate &shipSize, const Coordinate &bufferSize) : // field 
     craneState{SHIP},
     costToGetHere{0},
     aStarCost{0},
+    solved{false},
     ship(Space(shipSize.x, shipSize.y)),
     buffer(Space(bufferSize.x, bufferSize.y))
 {
@@ -16,7 +17,7 @@ Port::Port(const Coordinate &shipSize, const Coordinate &bufferSize) : // field 
 
 /// @brief Default Constructer not really useful I think
 Port::Port() : moveDescription{""}, parent(nullptr), cranePosition{Coordinate(0, 0)}, craneState{SHIP}, 
-    costToGetHere{0}, aStarCost{0}, ship{Space(0, 0)}, buffer{Space(0, 0)}
+    costToGetHere{0}, aStarCost{0}, solved{false}, ship{Space(0, 0)}, buffer{Space(0, 0)}
     {}
 
 /// @brief Will be useful for sorting. Sorts by the Port's internal cost
@@ -26,6 +27,16 @@ bool Port::operator<(const Port &rhs) const
 {
     return aStarCost < rhs.aStarCost;
 }
+
+/// @brief 
+/// @param lhs 
+/// @param rhs 
+/// @return 
+bool Port::greaterThan(const Port *lhs, const Port *rhs)
+{
+    return lhs->aStarCost > rhs->aStarCost;
+}
+
 
 /// @brief Calculates A*
 /// @return The asymptotically lower bound on the number of minutes to reach the solution
@@ -39,6 +50,11 @@ void Port::calculateAStar()
 std::string Port::getMoveDescription() const
 {
     return moveDescription;
+}
+
+bool Port::isSolved() const
+{
+    return solved;
 }
 
 /// @brief Lots of arguments, but it's for a good reason
@@ -98,7 +114,7 @@ Transfer::Transfer(
 /// however, that also means the heuristic is best when it is as close to the actual
 /// time but never overshooting it
 /// @return how close are we to the goal state in terms of minutes
-int Transfer::calculateHeuristic() const
+int Transfer::calculateHeuristic() 
 {
 
     // this is just the remaining number of containers that need to load. Will just
@@ -127,7 +143,10 @@ int Transfer::calculateHeuristic() const
     }
     // okay heuristic to be finetuned. Can certainly be better
     // TODO: finetune
-    return minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
+    int lowerBoundTimeLeft = minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
+    if (lowerBoundTimeLeft == 0)
+        solved = true;
+    return lowerBoundTimeLeft;
 }
 
 /// @brief Just moves the crane and container if applicable and updates the toOffload and toStay vectors.
