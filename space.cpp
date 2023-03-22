@@ -30,11 +30,16 @@ char Space::getCellState(const int col, const int row) const
 /// @param col 
 /// @param row 
 void Space::setAsHull(const int col, const int row)
+{ 
+    increaseStackHeight(col, row);
+    cells[col][row].setState(HULL);
+}
+
+void Space::setAsOccupied(const int col, const int row, Container *container)
 {
-    cells[col][row] = Cell(HULL);
-    if (stackHeights[col] <= row) {
-        stackHeights[col] = row + 1;
-    }
+    increaseStackHeight(col, row);
+    cells[col][row].setState(OCCUPIED);
+    cells[col][row].setContainer(container);
 }
 
 void Space::addContainer(const int col, const int row, Container* container)
@@ -43,28 +48,17 @@ void Space::addContainer(const int col, const int row, Container* container)
         throw 10;
     cells[col][row].setState(OCCUPIED);
     cells[col][row].setContainer(container);
-    stackHeights[col] = height - row;
+    increaseStackHeight(col, row);
 }
 
 void Space::removeContainer(const int col, const int row)
 {
     if (cells[col][row].getState() != OCCUPIED)
         throw 9;
-    cells[col][row] = Cell(EMPTY);
-    stackHeights[col]--;
+    cells[col][row].setState(EMPTY);
+    stackHeights[col] = stackHeights[col] - 1;
 }
 
-
-
-void Space::setCell(const int col, const int row, const Cell &cell)
-{
-    if (cell.getState() == OCCUPIED){
-        if (row < height - stackHeights[col]){
-            stackHeights[col] = height - row;
-        }
-    }
-    cells[col][row] = cell;
-}
 
 /// @brief Gets the height of the stack at a certain column. No bounds checking
 /// @param col 
@@ -195,4 +189,12 @@ Space &Space::operator=(Space &&rhs)
     // I would like to thank and credit Sandesh from
     // https://www.codementor.io/@sandesh87/the-rule-of-five-in-c-1pdgpzb04f
     // for actually explaining the rule of five 
+}
+
+void Space::increaseStackHeight(const int col, const int row)
+{
+    int newStackHeight = height - row;
+    if (newStackHeight > stackHeights[col]){
+        stackHeights[col] = newStackHeight;
+    }
 }

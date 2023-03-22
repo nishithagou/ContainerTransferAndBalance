@@ -57,7 +57,18 @@ Transfer::Transfer(
     for (size_t i = 0; i < shipLoad.size(); i++)
     {
         const Coordinate CO = shipLoad[i].second;
-        ship.setCell(CO.x, CO.y, shipLoad[i].first);
+        const Cell CELL = shipLoad[i].first;
+        if (CELL.getState() == HULL){
+            ship.setAsHull(CO.x, CO.y);
+        }
+        else if (CELL.getState() == OCCUPIED){
+            ship.setAsOccupied(CO.x, CO.y, CELL.getContainer());
+        }
+        else{
+            // what are you trying to pull?
+            throw 2;
+        }
+        // ship.setCell(CO.x, CO.y, shipLoad[i].first);
         // handles where we have containers that need to be offloaded
         if (shipLoad[i].first.getState() == OCCUPIED && shipLoad[i].first.getContainer()->isToBeOffloaded())
         {
