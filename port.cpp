@@ -691,26 +691,29 @@ std::string Transfer::toStringBasic() const
         }
     }
 
+    if (craneState == TRUCKBAY)
+        acc += "1\n";
+    else
+        acc += "0\n";
+
     std::string emptyShipStack;
-    for (int i = 0; i < buffer.getHeight(); i++)
+    for (int i = 0; i < ship.getHeight(); i++)
         emptyShipStack += "0";
     emptyShipStack += "\n";
 
-    for (int i = 0; i < buffer.getWidth(); i++){
-        if (buffer.getStackHeight(i) == 0 || 
-            buffer.getTopPhysicalCell(i).getState() == HULL ||
-            buffer.getTopPhysicalCell(i).getState() == UNOCCUPIABLE){
+    for (int i = 0; i < ship.getWidth(); i++){
+        if (ship.getStackHeight(i) == 0){
             acc += emptyShipStack;
         }
         else{
-            for (int j = 0; j < buffer.getHeight(); j++){
-                if (buffer.getCellState(i, j) == EMPTY || 
-                    buffer.getCellState(i, j) == HULL ||
-                    buffer.getCellState(i, j) == UNOCCUPIABLE){
+            for (int j = 0; j < ship.getHeight(); j++){
+                if (ship.getCellState(i, j) == EMPTY || 
+                    ship.getCellState(i, j) == HULL ||
+                    ship.getCellState(i, j) == UNOCCUPIABLE){
                     acc += "0";
                 }
-                else if (buffer.getCellState(i, j) == OCCUPIED){
-                    if (buffer.getCell(i, j).getContainer()->isToBeOffloaded()){
+                else if (ship.getCellState(i, j) == OCCUPIED){
+                    if (ship.getCell(i, j).getContainer()->isToBeOffloaded()){
                         acc += "2";
                     }
                     else {

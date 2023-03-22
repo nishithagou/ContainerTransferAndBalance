@@ -58,6 +58,11 @@ void Space::removeContainer(const int col, const int row)
 
 void Space::setCell(const int col, const int row, const Cell &cell)
 {
+    if (cell.getState() == OCCUPIED){
+        if (row < height - stackHeights[col]){
+            stackHeights[col] = height - row;
+        }
+    }
     cells[col][row] = cell;
 }
 
