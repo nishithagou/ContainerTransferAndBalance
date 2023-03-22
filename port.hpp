@@ -31,11 +31,11 @@ class Port{
     Port();
     Port(const Coordinate& shipSize, const Coordinate& bufferSize);
     virtual bool operator==(const Port& rhs) const;
-    const bool operator<(const Port& rhs) const;
-    virtual std::list<Port*>& tryAllOperators() const = 0;
+    bool operator<(const Port& rhs) const;
+    virtual std::list<Port*> tryAllOperators() const = 0;
     void calculateAStar();
-    const std::string& getMoveDescription() const;
-    virtual const std::string& toStringBasic() const = 0;
+    std::string getMoveDescription() const;
+    virtual std::string toStringBasic() const = 0;
     protected:
     virtual int calculateHeuristic() const = 0;
     int calculateManhattanDistance(const Coordinate& start, const Coordinate& end, 
@@ -54,8 +54,8 @@ class Transfer: public Port{
         const Coordinate& bufferSize, 
         const std::vector<std::pair<Cell, Coordinate>>& shipLoad, 
         std::vector<Container*>& toLoad);
-    std::list<Port*>& tryAllOperators() const;
-    virtual const std::string& toStringBasic() const;
+    std::list<Port*> tryAllOperators() const;
+    virtual std::string toStringBasic() const;
     private:
     int calculateHeuristic() const;
     void moveContainerAndCrane(Container* c, const Coordinate& start, const Coordinate& end,  

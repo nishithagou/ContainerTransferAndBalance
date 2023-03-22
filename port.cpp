@@ -3,20 +3,26 @@
 /// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize
 Port::Port(const Coordinate &shipSize, const Coordinate &bufferSize) : // field initialization
+    moveDescription{""},
+    parent{nullptr},
+    cranePosition{Coordinate(0, 0)}, 
+    craneState{SHIP},
+    costToGetHere{0},
+    aStarCost{0},
     ship(Space(shipSize.x, shipSize.y)),
-    buffer(Space(bufferSize.x, bufferSize.y)),
-    cranePosition{Coordinate(0, 0)}, craneState{SHIP}, costToGetHere{0}
+    buffer(Space(bufferSize.x, bufferSize.y))
 {
 }
 
 /// @brief Default Constructer not really useful I think
-Port::Port() : ship(Space(0, 0)), buffer(Space(0, 0)),
-               cranePosition{Coordinate(0, 0)}, craneState{SHIP}, costToGetHere{0} {}
+Port::Port() : moveDescription{""}, parent(nullptr), cranePosition{Coordinate(0, 0)}, craneState{SHIP}, 
+    costToGetHere{0}, aStarCost{0}, ship{Space(0, 0)}, buffer{Space(0, 0)}
+    {}
 
 /// @brief Will be useful for sorting. Sorts by the Port's internal cost
 /// @param rhs
 /// @return whether this Port's cost is less than rhs's cost
-const bool Port::operator<(const Port &rhs) const
+bool Port::operator<(const Port &rhs) const
 {
     return aStarCost < rhs.aStarCost;
 }
@@ -30,7 +36,7 @@ void Port::calculateAStar()
 
 /// @brief Returns the move description
 /// @return const string type
-const std::string &Port::getMoveDescription() const
+std::string Port::getMoveDescription() const
 {
     return moveDescription;
 }
@@ -105,7 +111,6 @@ int Transfer::calculateHeuristic() const
     for (const std::pair<ContainerCoordinate, Container *> &p : toStay)
     {
         const ContainerCoordinate coord = p.first;
-        const Container *container = p.second;
         if (coord.isInBuffer)
             minutesToMoveFromBufferToShip += 4 + coord.x + coord.y;
     }
@@ -389,7 +394,7 @@ bool Port::operator==(const Port &rhs) const
 /// container
 /// 2. Call to calculate the cost with A*
 /// @return
-std::list<Port *> &Transfer::tryAllOperators() const
+std::list<Port *> Transfer::tryAllOperators() const
 {
     std::list<Port *> acc;
     // yo know I'm legit when I use a switch statement
@@ -637,6 +642,9 @@ std::list<Port *> &Transfer::tryAllOperators() const
         }
         break;
     }
+    default:
+        // invalid state
+        throw 2;
     }
     return acc;
 }
@@ -648,7 +656,7 @@ std::list<Port *> &Transfer::tryAllOperators() const
 /// the representation is kindof flipped and is optimized not for understanding but for 
 /// hashing
 /// @return basic string representation
-const std::string &Transfer::toStringBasic() const
+std::string Transfer::toStringBasic() const
 {
     std::string acc;
     // small optimization
@@ -659,7 +667,7 @@ const std::string &Transfer::toStringBasic() const
     for (int i = 0; i < buffer.getHeight(); i++)
         emptyBufferStack += "0";
     emptyBufferStack += "\n";
-    
+
     for (int i = 0; i < buffer.getWidth(); i++){
         if (buffer.getStackHeight(i) == 0){
             acc += emptyBufferStack;

@@ -35,7 +35,7 @@ class Space {
     int getWidth() const;
     int getHeight() const;
     Cell getCell(const int col, const int row) const;
-    const char getCellState(const int col, const int row) const;
+    char getCellState(const int col, const int row) const;
 
     // rule of five
 

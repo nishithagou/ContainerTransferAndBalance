@@ -21,7 +21,7 @@ Cell Space::getCell(const int col, const int row) const
     return cells[col][row];
 }
 
-const char Space::getCellState(const int col, const int row) const
+char Space::getCellState(const int col, const int row) const
 {
     return cells[col][row].getState();
 }
@@ -103,19 +103,53 @@ Space::~Space()
     delete[] cells;
 }
 
-/// @brief TODO Copy constructer
+/// @brief Copy constructer
 /// @param rhs 
 Space::Space(const Space &rhs)
 {
-    
+    height = rhs.height;
+    width = rhs.width;
+    stackHeights = new int[width];
+    cells = new Cell*[width];
+    for (int i = 0; i < width; i++){
+        cells[i] = new Cell[height];
+        stackHeights[i] = rhs.stackHeights[i];
+        for (int j = 0; j < height; j++){
+            cells[i][j] = rhs.cells[i][j];
+        }
+    }
 }
 
-/// @brief TODO: Assignment constructer
+/// @brief Assignment constructer
 /// @param rhs 
 /// @return 
 Space &Space::operator=(const Space &rhs)
 {
-    // TODO: insert return statement here
+    if (this == &rhs)
+        return *this;
+
+    // deallocate old dynamically allocated data
+    delete[] stackHeights;
+    for (int i = 0; i < width; i++){
+        delete[] cells[i];
+    }
+    delete[] rhs.cells;
+
+    // allocate and take in new data
+    height = rhs.height;
+    width = rhs.width;
+    stackHeights = new int[width];
+    cells = new Cell*[width];
+    for (int i = 0; i < width; i++){
+        cells[i] = new Cell[height];
+        stackHeights[i] = rhs.stackHeights[i];
+        for (int j = 0; j < height; j++){
+            cells[i][j] = rhs.cells[i][j];
+        }
+    }
+
+    return *this;
+
 }
 
 /// @brief Move constructor
