@@ -3,9 +3,9 @@
 /// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize
 Port::Port(const Coordinate &shipSize, const Coordinate &bufferSize) : // field initialization
-                                                                       ship(Space(shipSize.x, shipSize.y)),
-                                                                       buffer(Space(bufferSize.x, bufferSize.y)),
-                                                                       cranePosition{Coordinate(0, 0)}, craneState{SHIP}, costToGetHere{0}
+    ship(Space(shipSize.x, shipSize.y)),
+    buffer(Space(bufferSize.x, bufferSize.y)),
+    cranePosition{Coordinate(0, 0)}, craneState{SHIP}, costToGetHere{0}
 {
 }
 
@@ -137,6 +137,9 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
     {
         cranePosition = end;
         craneState = endSpace;
+        moveDescription += "\nMoving crane from " 
+            + toStringFromState(startSpace) + " " + start.toString() + " to " 
+            + toStringFromState(endSpace) + " " + end.toString();
     }
     // moving the crane and the container c
     else
@@ -171,9 +174,10 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
 /// @param end
 /// @param endSpace
 /// @return
-Transfer *Transfer::createDerivatative(Container *container, const Coordinate &end, const char endSpace) const
+Transfer *Transfer::createDerivatative(Container *container, const Coordinate &end, const char endSpace)  const
 {
     Transfer *deriv = new Transfer(*this);
+    deriv->moveDescription = moveDescription;
     int translationMove = calculateManhattanDistance(cranePosition, end, craneState, endSpace);
     deriv->moveContainerAndCrane(container, cranePosition, end, craneState, endSpace);
     deriv->costToGetHere += translationMove;
@@ -328,6 +332,23 @@ int Port::calculateManhattanDistance(const Coordinate &start,
         }
         // only dealing with distance between ship and buffer also pretty trivial
         return start.x + start.y + end.x + end.y + 4;
+    }
+}
+
+std::string Port::toStringFromState(const char state)
+{
+    // CraneState {SHIP, BUFFER, TRUCKBAY};
+    switch (state)
+    {
+    case SHIP:
+        return "Ship";
+    case BUFFER:
+        return "Buffer";
+    case TRUCKBAY:
+        return "Truck Bay";
+    default:
+        // why did you send a invalid state
+        throw 3;
     }
 }
 

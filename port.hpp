@@ -16,6 +16,8 @@ class Port{
     protected:
     /// @brief describes the move done; only to be modified in tryAllOperators
     std::string moveDescription;
+    /// @brief parent describes how the Port is derived from
+    Port* parent;
     Coordinate cranePosition;
     char craneState;
     /// @brief the number of minutes it took to reach this Port i.e. g(n)
@@ -39,6 +41,7 @@ class Port{
     virtual int calculateHeuristic() const = 0;
     int calculateManhattanDistance(const Coordinate& start, const Coordinate& end, 
         const char startSpace, const char endSpace) const;
+    static std::string toStringFromState(const char state);
 };
 
 /// @brief For transfer operations of the abstract Port class
