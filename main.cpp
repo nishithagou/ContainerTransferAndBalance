@@ -26,6 +26,7 @@ int main(int argc, char** argv){
     toLoad.push_back(new Container("From truck 2", 200));
     
     Transfer base(Coordinate(12,9), Coordinate(24, 5), shipLoad, toLoad);
-    cout << base.toStringBasic() << endl;
+    string tostring = base.toStringBasic();
+    cout << tostring << endl;
     return 0;
 }

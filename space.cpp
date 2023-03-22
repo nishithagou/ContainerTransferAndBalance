@@ -1,6 +1,6 @@
 #include "space.hpp"
 
-Space::Space(const int width, const int height)
+Space::Space(const int width, const int height): width(width), height(height)
 {
     cells = new Cell*[width];
     stackHeights = new int[width];

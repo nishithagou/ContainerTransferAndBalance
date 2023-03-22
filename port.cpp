@@ -65,10 +65,10 @@ Transfer::Transfer(
             toOffload.push_back(containerToOffload);
         }
         // handles where we have containers that just need to stay in the ship after the operation
-        if (shipLoad[i].first.getState() == OCCUPIED && !shipLoad[i].first.getContainer()->isToBeOffloaded())
+        else if (shipLoad[i].first.getState() == OCCUPIED && !shipLoad[i].first.getContainer()->isToBeOffloaded())
         {
             std::pair<ContainerCoordinate, Container *> containerToStay(ContainerCoordinate(CO.x, CO.y), shipLoad[i].first.getContainer());
-            toOffload.push_back(containerToStay);
+            toStay.push_back(containerToStay);
         }
     }
     // preallocate memory minor optimization
