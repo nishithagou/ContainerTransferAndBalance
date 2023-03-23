@@ -530,4 +530,66 @@ class Space:
 
 
 
-]
+#adding main function
+from typing import List, Tuple
+from collections import deque
+from port import Port, Transfer, Container, Cell, Coordinate
+
+# some hardcoded values to be added
+ship_load: List[Tuple[Cell, Coordinate]] = []
+all_containers: List[Container] = []
+hull = Cell.HULL
+for i in range(4):
+    hull_spot = (hull, Coordinate(0, 8-i))
+    ship_load.append(hull_spot)
+    hull_spot2 = (hull, Coordinate(11, 8-i))
+    ship_load.append(hull_spot2)
+    all_containers.append(Container("Container Ld " + str(i), 100+i))
+    container_spot = (Cell(all_containers[-1]), Coordinate(1, 8-i))
+    ship_load.append(container_spot)
+
+all_containers.append(Container("Container to Offload", 420, True))
+to_add = (Cell(all_containers[-1]), Coordinate(2, 8))
+ship_load.append(to_add)
+to_load = [Container("From truck 1", 100), Container("From truck 2", 200)]
+
+# cannot use the stack data structure because I need to sort
+# but stack functions pretty much like an actual stack as I in add to the top and pop
+# from the top
+stack = deque()
+base = Transfer(Coordinate(12,9), Coordinate(24, 5), ship_load, to_load)
+# those who do not learn from history are doomed to repeat it literally
+history = set()
+history.add(base.to_string_basic())
+stack.append(base)
+solution = None
+
+while len(stack) > 0:
+    if stack[-1].is_solved():
+        solution = stack[-1]
+        break
+
+    # expand cheapest node
+    derivs = stack[-1].try_all_operators()
+    print("Best Node so Far:")
+    print(stack[-1].to_string_basic())
+
+    stack.pop()
+
+    # look through derivs
+    for deriv in derivs:
+        if deriv.to_string_basic() in history:
+            if deriv is derivs[0]:
+                derivs.popleft()
+                continue
+            elif deriv is derivs[-1]:
+                derivs.pop()
+                break
+            derivs.remove(deriv)
+        else:
+            stack.append(deriv)
+
+    # sort
+    stack = deque(sorted(stack, key=lambda x: x > x))
+
+print(solution.get_move_description())
