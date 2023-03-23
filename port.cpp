@@ -3,23 +3,40 @@
 /// @brief It wants a constructer for an abstract class sure why not
 /// @param shipSize
 Port::Port(const Coordinate &shipSize, const Coordinate &bufferSize) : // field initialization
+    moveDescription{""},
+    parent{nullptr},
+    cranePosition{Coordinate(0, 0)}, 
+    craneState{SHIP},
+    costToGetHere{0},
+    aStarCost{0},
+    solved{false},
     ship(Space(shipSize.x, shipSize.y)),
-    buffer(Space(bufferSize.x, bufferSize.y)),
-    cranePosition{Coordinate(0, 0)}, craneState{SHIP}, costToGetHere{0}
+    buffer(Space(bufferSize.x, bufferSize.y))
 {
 }
 
 /// @brief Default Constructer not really useful I think
-Port::Port() : ship(Space(0, 0)), buffer(Space(0, 0)),
-               cranePosition{Coordinate(0, 0)}, craneState{SHIP}, costToGetHere{0} {}
+Port::Port() : moveDescription{""}, parent(nullptr), cranePosition{Coordinate(0, 0)}, craneState{SHIP}, 
+    costToGetHere{0}, aStarCost{0}, solved{false}, ship{Space(0, 0)}, buffer{Space(0, 0)}
+    {}
 
 /// @brief Will be useful for sorting. Sorts by the Port's internal cost
 /// @param rhs
 /// @return whether this Port's cost is less than rhs's cost
-const bool Port::operator<(const Port &rhs) const
+bool Port::operator<(const Port &rhs) const
 {
     return aStarCost < rhs.aStarCost;
 }
+
+/// @brief 
+/// @param lhs 
+/// @param rhs 
+/// @return 
+bool Port::greaterThan(const Port *lhs, const Port *rhs)
+{
+    return lhs->aStarCost > rhs->aStarCost;
+}
+
 
 /// @brief Calculates A*
 /// @return The asymptotically lower bound on the number of minutes to reach the solution
@@ -30,9 +47,14 @@ void Port::calculateAStar()
 
 /// @brief Returns the move description
 /// @return const string type
-const std::string &Port::getMoveDescription() const
+std::string Port::getMoveDescription() const
 {
     return moveDescription;
+}
+
+bool Port::isSolved() const
+{
+    return solved;
 }
 
 /// @brief Lots of arguments, but it's for a good reason
@@ -51,7 +73,18 @@ Transfer::Transfer(
     for (size_t i = 0; i < shipLoad.size(); i++)
     {
         const Coordinate CO = shipLoad[i].second;
-        ship.setCell(CO.x, CO.y, shipLoad[i].first);
+        const Cell CELL = shipLoad[i].first;
+        if (CELL.getState() == HULL){
+            ship.setAsHull(CO.x, CO.y);
+        }
+        else if (CELL.getState() == OCCUPIED){
+            ship.setAsOccupied(CO.x, CO.y, CELL.getContainer());
+        }
+        else{
+            // what are you trying to pull?
+            throw 2;
+        }
+        // ship.setCell(CO.x, CO.y, shipLoad[i].first);
         // handles where we have containers that need to be offloaded
         if (shipLoad[i].first.getState() == OCCUPIED && shipLoad[i].first.getContainer()->isToBeOffloaded())
         {
@@ -59,10 +92,10 @@ Transfer::Transfer(
             toOffload.push_back(containerToOffload);
         }
         // handles where we have containers that just need to stay in the ship after the operation
-        if (shipLoad[i].first.getState() == OCCUPIED && !shipLoad[i].first.getContainer()->isToBeOffloaded())
+        else if (shipLoad[i].first.getState() == OCCUPIED && !shipLoad[i].first.getContainer()->isToBeOffloaded())
         {
             std::pair<ContainerCoordinate, Container *> containerToStay(ContainerCoordinate(CO.x, CO.y), shipLoad[i].first.getContainer());
-            toOffload.push_back(containerToStay);
+            toStay.push_back(containerToStay);
         }
     }
     // preallocate memory minor optimization
@@ -77,19 +110,11 @@ Transfer::Transfer(
     }
 }
 
-/// @brief TODO
-/// I think this implementation is incorrect
-/// @return
-int Transfer::toHashIndex() const
-{
-    return 0;
-}
-
 /// @brief  Recall that our heuristic is admissible so long it never overestimates;
 /// however, that also means the heuristic is best when it is as close to the actual
 /// time but never overshooting it
 /// @return how close are we to the goal state in terms of minutes
-int Transfer::calculateHeuristic() const
+int Transfer::calculateHeuristic() 
 {
 
     // this is just the remaining number of containers that need to load. Will just
@@ -113,13 +138,15 @@ int Transfer::calculateHeuristic() const
     for (const std::pair<ContainerCoordinate, Container *> &p : toStay)
     {
         const ContainerCoordinate coord = p.first;
-        const Container *container = p.second;
         if (coord.isInBuffer)
             minutesToMoveFromBufferToShip += 4 + coord.x + coord.y;
     }
     // okay heuristic to be finetuned. Can certainly be better
     // TODO: finetune
-    return minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
+    int lowerBoundTimeLeft = minutesToLoad + minutesToOffload + minutesToMoveFromBufferToShip;
+    if (lowerBoundTimeLeft == 0)
+        solved = true;
+    return lowerBoundTimeLeft;
 }
 
 /// @brief Just moves the crane and container if applicable and updates the toOffload and toStay vectors.
@@ -137,7 +164,7 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
     {
         cranePosition = end;
         craneState = endSpace;
-        moveDescription += "\nMoving crane from " 
+        moveDescription += "\nMoving crane only from " 
             + toStringFromState(startSpace) + " " + start.toString() + " to " 
             + toStringFromState(endSpace) + " " + end.toString();
     }
@@ -165,6 +192,9 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
         {
             ship.removeContainer(end.x, end.y);
         }
+        moveDescription += "\nMoving container " + container->toString() + " from " 
+            + toStringFromState(startSpace) + " " + start.toString() + " to " 
+            + toStringFromState(endSpace) + " " + end.toString();
     }
 }
 
@@ -394,7 +424,7 @@ bool Port::operator==(const Port &rhs) const
 /// container
 /// 2. Call to calculate the cost with A*
 /// @return
-std::list<Port *> &Transfer::tryAllOperators() const
+std::list<Port *> Transfer::tryAllOperators() const
 {
     std::list<Port *> acc;
     // yo know I'm legit when I use a switch statement
@@ -642,6 +672,87 @@ std::list<Port *> &Transfer::tryAllOperators() const
         }
         break;
     }
+    default:
+        // invalid state
+        throw 2;
+    }
+    return acc;
+}
+
+/// @brief Gets a string representation of the Transfer port which basically boils down 
+/// that 0 is empty/unaccessible/Hull 
+/// that 1 is a container that needs to stay in the ship
+/// and 2 is a container that needs to be offloaded
+/// the representation is kindof flipped and is optimized not for understanding but for 
+/// hashing
+/// @return basic string representation
+std::string Transfer::toStringBasic() const
+{
+    std::string acc;
+    // small optimization
+    acc.reserve(buffer.getHeight() * (buffer.getWidth() + 1) + 
+        ship.getHeight() * (ship.getWidth() + 1));
+
+    std::string emptyBufferStack;
+    for (int i = 0; i < buffer.getHeight(); i++)
+        emptyBufferStack += "0";
+    emptyBufferStack += "\n";
+
+    for (int i = 0; i < buffer.getWidth(); i++){
+        if (buffer.getStackHeight(i) == 0){
+            acc += emptyBufferStack;
+        }
+        else{
+            for (int j = 0; j < buffer.getHeight(); j++){
+                if (buffer.getCellState(i, j) == EMPTY ||
+                    buffer.getCellState(i, j) == UNOCCUPIABLE){
+                    acc += "0";
+                }
+                else if (buffer.getCellState(i, j) == OCCUPIED){
+                    if (buffer.getCell(i, j).getContainer()->isToBeOffloaded()){
+                        acc += "2";
+                    }
+                    else {
+                        acc += "1";
+                    }
+                }
+            }
+            acc += "\n";
+        }
+    }
+
+    if (craneState == TRUCKBAY)
+        acc += "1\n";
+    else
+        acc += "0\n";
+
+    std::string emptyShipStack;
+    for (int i = 0; i < ship.getHeight(); i++)
+        emptyShipStack += "0";
+    emptyShipStack += "\n";
+
+    for (int i = 0; i < ship.getWidth(); i++){
+        if (ship.getStackHeight(i) == 0){
+            acc += emptyShipStack;
+        }
+        else{
+            for (int j = 0; j < ship.getHeight(); j++){
+                if (ship.getCellState(i, j) == EMPTY || 
+                    ship.getCellState(i, j) == HULL ||
+                    ship.getCellState(i, j) == UNOCCUPIABLE){
+                    acc += "0";
+                }
+                else if (ship.getCellState(i, j) == OCCUPIED){
+                    if (ship.getCell(i, j).getContainer()->isToBeOffloaded()){
+                        acc += "2";
+                    }
+                    else {
+                        acc += "1";
+                    }
+                }
+            }
+            acc += "\n";
+        }
     }
     return acc;
 }

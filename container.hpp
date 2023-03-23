@@ -4,19 +4,19 @@
 
 class Container
 {
-    int weight;
     std::string description;
+    int weight;
     // only useful for transfer
     bool toOffload;
     public:
-    Container(std::string description, int weight) : description(description), weight(weight), 
-        toOffload(false) {}
-    Container(std::string description, int weight, bool toOffload): description(description), weight(weight), 
-        toOffload(toOffload) {}
-    const std::string getDescription() const;
-    const std::string toString() const;
-    const int getWeight() const;
-    const bool isToBeOffloaded() const;
+    Container(const std::string description, const int weight) : description(description), 
+        weight(weight), toOffload(false) {}
+    Container(const std::string description, const int weight, const bool toOffload): 
+        description(description), weight(weight), toOffload(toOffload) {}
+    std::string getDescription() const;
+    std::string toString() const;
+    int getWeight() const;
+    bool isToBeOffloaded() const;
 };
 
 #endif

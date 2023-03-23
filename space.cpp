@@ -1,6 +1,6 @@
 #include "space.hpp"
 
-Space::Space(const int width, const int height)
+Space::Space(const int width, const int height): width(width), height(height)
 {
     cells = new Cell*[width];
     stackHeights = new int[width];
@@ -21,7 +21,7 @@ Cell Space::getCell(const int col, const int row) const
     return cells[col][row];
 }
 
-const char Space::getCellState(const int col, const int row) const
+char Space::getCellState(const int col, const int row) const
 {
     return cells[col][row].getState();
 }
@@ -30,11 +30,16 @@ const char Space::getCellState(const int col, const int row) const
 /// @param col 
 /// @param row 
 void Space::setAsHull(const int col, const int row)
+{ 
+    increaseStackHeight(col, row);
+    cells[col][row].setState(HULL);
+}
+
+void Space::setAsOccupied(const int col, const int row, Container *container)
 {
-    cells[col][row] = Cell(HULL);
-    if (stackHeights[col] <= row) {
-        stackHeights[col] = row + 1;
-    }
+    increaseStackHeight(col, row);
+    cells[col][row].setState(OCCUPIED);
+    cells[col][row].setContainer(container);
 }
 
 void Space::addContainer(const int col, const int row, Container* container)
@@ -43,23 +48,17 @@ void Space::addContainer(const int col, const int row, Container* container)
         throw 10;
     cells[col][row].setState(OCCUPIED);
     cells[col][row].setContainer(container);
-    stackHeights[col] = height - row;
+    increaseStackHeight(col, row);
 }
 
 void Space::removeContainer(const int col, const int row)
 {
     if (cells[col][row].getState() != OCCUPIED)
         throw 9;
-    cells[col][row] = Cell(EMPTY);
-    stackHeights[col]--;
+    cells[col][row].setState(EMPTY);
+    stackHeights[col] = stackHeights[col] - 1;
 }
 
-
-
-void Space::setCell(const int col, const int row, const Cell &cell)
-{
-    cells[col][row] = cell;
-}
 
 /// @brief Gets the height of the stack at a certain column. No bounds checking
 /// @param col 
@@ -103,19 +102,53 @@ Space::~Space()
     delete[] cells;
 }
 
-/// @brief TODO Copy constructer
+/// @brief Copy constructer
 /// @param rhs 
 Space::Space(const Space &rhs)
 {
-    
+    height = rhs.height;
+    width = rhs.width;
+    stackHeights = new int[width];
+    cells = new Cell*[width];
+    for (int i = 0; i < width; i++){
+        cells[i] = new Cell[height];
+        stackHeights[i] = rhs.stackHeights[i];
+        for (int j = 0; j < height; j++){
+            cells[i][j] = rhs.cells[i][j];
+        }
+    }
 }
 
-/// @brief TODO: Assignment constructer
+/// @brief Assignment constructer
 /// @param rhs 
 /// @return 
 Space &Space::operator=(const Space &rhs)
 {
-    // TODO: insert return statement here
+    if (this == &rhs)
+        return *this;
+
+    // deallocate old dynamically allocated data
+    delete[] stackHeights;
+    for (int i = 0; i < width; i++){
+        delete[] cells[i];
+    }
+    delete[] rhs.cells;
+
+    // allocate and take in new data
+    height = rhs.height;
+    width = rhs.width;
+    stackHeights = new int[width];
+    cells = new Cell*[width];
+    for (int i = 0; i < width; i++){
+        cells[i] = new Cell[height];
+        stackHeights[i] = rhs.stackHeights[i];
+        for (int j = 0; j < height; j++){
+            cells[i][j] = rhs.cells[i][j];
+        }
+    }
+
+    return *this;
+
 }
 
 /// @brief Move constructor
@@ -156,4 +189,12 @@ Space &Space::operator=(Space &&rhs)
     // I would like to thank and credit Sandesh from
     // https://www.codementor.io/@sandesh87/the-rule-of-five-in-c-1pdgpzb04f
     // for actually explaining the rule of five 
+}
+
+void Space::increaseStackHeight(const int col, const int row)
+{
+    int newStackHeight = height - row;
+    if (newStackHeight > stackHeights[col]){
+        stackHeights[col] = newStackHeight;
+    }
 }

@@ -23,10 +23,13 @@ class Space {
     
     // mutators 
 
+    // for intialization first time setup for the ship space only
     void setAsHull(const int col, const int row);
+    void setAsOccupied(const int col, const int row, Container* container);
+
+    // for later so it does not make mess up stack heights
     void addContainer(const int col, const int row, Container* container);
     void removeContainer(const int col, const int row);
-    void setCell(const int col, const int row, const Cell& cell);
 
     // getters 
 
@@ -35,7 +38,7 @@ class Space {
     int getWidth() const;
     int getHeight() const;
     Cell getCell(const int col, const int row) const;
-    const char getCellState(const int col, const int row) const;
+    char getCellState(const int col, const int row) const;
 
     // rule of five
 
@@ -45,5 +48,8 @@ class Space {
     // move operations for rule of five
     Space(Space&& other);
     Space& operator=(Space&& rhs);
+
+    private:
+    void increaseStackHeight(const int col, const int row);
 };
 #endif
