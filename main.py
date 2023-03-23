@@ -246,6 +246,7 @@ class Transfer:
             new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
             new_coord.isInBuffer = newSpace == "BUFFER"
             to_add = (new_coord, container)
+            to_load.pop()
             self.toStay.append(to_add)
 
 def calculateManhattanDistance(start, end, startSpace, endSpace):
