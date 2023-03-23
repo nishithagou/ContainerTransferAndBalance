@@ -44,7 +44,8 @@ int main(int argc, char** argv){
 
         // expand cheapest node
         list<Port*> derivs = stack.back()->tryAllOperators();
-
+        cout << "Best Node so Far: " << endl;
+        cout << stack.back()->toStringBasic();
         
         stack.pop_back();
         

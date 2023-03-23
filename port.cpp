@@ -162,6 +162,15 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
     // just moving the crane
     if (container == nullptr)
     {
+        // another sanity check
+        if (endSpace == SHIP){
+            if (ship.getCellState(end.x, end.y) != OCCUPIED)
+                throw 5;
+        }
+        else if (endSpace == BUFFER){
+            if (buffer.getCellState(end.x, end.y) != OCCUPIED)
+                throw 5;
+        }
         cranePosition = end;
         craneState = endSpace;
         moveDescription += "\nMoving crane only from " 
@@ -186,11 +195,11 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
         // remove container at beginning
         if (startSpace == BUFFER)
         {
-            buffer.removeContainer(end.x, end.y);
+            buffer.removeContainer(start.x, start.y);
         }
         else if (startSpace == SHIP)
         {
-            ship.removeContainer(end.x, end.y);
+            ship.removeContainer(start.x, start.y);
         }
         moveDescription += "\nMoving container " + container->toString() + " from " 
             + toStringFromState(startSpace) + " " + start.toString() + " to " 
@@ -207,6 +216,7 @@ void Transfer::moveContainerAndCrane(Container *container, const Coordinate &sta
 Transfer *Transfer::createDerivatative(Container *container, const Coordinate &end, const char endSpace)  const
 {
     Transfer *deriv = new Transfer(*this);
+    deriv->parent = (Port*)this;
     deriv->moveDescription = moveDescription;
     int translationMove = calculateManhattanDistance(cranePosition, end, craneState, endSpace);
     deriv->moveContainerAndCrane(container, cranePosition, end, craneState, endSpace);
@@ -426,6 +436,7 @@ bool Port::operator==(const Port &rhs) const
 /// @return
 std::list<Port *> Transfer::tryAllOperators() const
 {
+    const int CRANE_COLUMN = cranePosition.x;
     std::list<Port *> acc;
     // yo know I'm legit when I use a switch statement
     switch (craneState)
@@ -441,20 +452,11 @@ std::list<Port *> Transfer::tryAllOperators() const
             for (int i = 0; i < ship.getWidth(); i++)
             {
                 if (ship.getStackHeight(i) > 0 &&
-                    ship.getTopPhysicalCell(i).getState() != HULL)
+                    ship.getTopPhysicalCell(i).getState() != HULL && i != CRANE_COLUMN)
                 {
                     // to create a new ContainerCoordinate in the ship
-                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
                     acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
-                }
-            }
-            // just moving crane itself only to another container in buffer
-            for (int i = 0; i < buffer.getWidth(); i++)
-            {
-                if (buffer.getStackHeight(i) > 0)
-                {
-                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
-                    acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
                 }
             }
             if (toLoad.size() != 0){
@@ -483,10 +485,10 @@ std::list<Port *> Transfer::tryAllOperators() const
             // try moving container to another position in the ship
             for (int i = 0; i < ship.getWidth(); i++)
             {
-                if (ship.getStackHeight(i) < ship.getHeight() - 1)
+                if (ship.getStackHeight(i) < ship.getHeight() - 1 && i != CRANE_COLUMN)
                 {
                     // to create a new ContainerCoordinate in the ship
-                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
                     acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
                 }
             }
@@ -498,7 +500,7 @@ std::list<Port *> Transfer::tryAllOperators() const
                 if (buffer.getStackHeight(i) < buffer.getHeight() - 1)
                 {
                     // to create a new ContainerCoordinate in the ship
-                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i) - 1);
                     acc.push_back(createDerivatative(toMove, NEW_COORD, BUFFER));
                 }
             }
@@ -507,10 +509,10 @@ std::list<Port *> Transfer::tryAllOperators() const
             for (int i = 0; i < ship.getWidth(); i++)
             {
                 if (ship.getStackHeight(i) > 0 &&
-                    ship.getTopPhysicalCell(i).getState() != HULL)
+                    ship.getTopPhysicalCell(i).getState() != HULL&& i != CRANE_COLUMN)
                 {
                     // to create a new ContainerCoordinate in the ship
-                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
                     acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
                 }
             }
@@ -519,7 +521,7 @@ std::list<Port *> Transfer::tryAllOperators() const
             {
                 if (buffer.getStackHeight(i) > 0)
                 {
-                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i) - 1);
                     acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
                 }
             }
@@ -564,7 +566,7 @@ std::list<Port *> Transfer::tryAllOperators() const
             {
 
                 // to create a new ContainerCoordinate in the ship
-                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
 
                 acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
             }
@@ -576,9 +578,9 @@ std::list<Port *> Transfer::tryAllOperators() const
         // just moving crane itself only to another container in buffer
         for (int i = 0; i < buffer.getWidth(); i++)
         {
-            if (buffer.getStackHeight(i) > 0)
+            if (buffer.getStackHeight(i) > 0 && i != CRANE_COLUMN)
             {
-                const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i) - 1);
                 acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
             }
         }
@@ -590,7 +592,7 @@ std::list<Port *> Transfer::tryAllOperators() const
                 ship.getTopPhysicalCell(i).getState() != HULL)
             {
                 // to create a new ContainerCoordinate in the ship
-                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
                 acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
             }
         }
@@ -612,7 +614,7 @@ std::list<Port *> Transfer::tryAllOperators() const
         {
             if (buffer.getStackHeight(i) > 0)
             {
-                const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i) - 1);
                 acc.push_back(createDerivatative(nullptr, NEW_COORD, BUFFER));
             }
         }
@@ -624,7 +626,7 @@ std::list<Port *> Transfer::tryAllOperators() const
                 ship.getTopPhysicalCell(i).getState() != HULL)
             {
                 // to create a new ContainerCoordinate in the ship
-                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
 
                 acc.push_back(createDerivatative(nullptr, NEW_COORD, SHIP));
             }
@@ -651,7 +653,7 @@ std::list<Port *> Transfer::tryAllOperators() const
                 {
 
                     // to create a new ContainerCoordinate in the buffer
-                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, buffer.getHeight() - buffer.getStackHeight(i) - 1);
 
                     acc.push_back(createDerivatative(toMove, NEW_COORD, BUFFER));
                 }
@@ -664,7 +666,7 @@ std::list<Port *> Transfer::tryAllOperators() const
                 {
 
                     // to create a new ContainerCoordinate in the ship
-                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i));
+                    const Coordinate NEW_COORD = Coordinate(i, ship.getHeight() - ship.getStackHeight(i) - 1);
 
                     acc.push_back(createDerivatative(toMove, NEW_COORD, SHIP));
                 }

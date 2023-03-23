@@ -68,7 +68,7 @@ int Space::getStackHeight(const int col) const
     return stackHeights[col];
 }
 
-/// @brief sorely needed
+/// @brief Gets the top-most non-EMPTY cell
 /// @param col 
 /// @return 
 Cell Space::getTopPhysicalCell(const int col) const
@@ -78,7 +78,7 @@ Cell Space::getTopPhysicalCell(const int col) const
     }
     else{
         // TODO Make sure this logic is correct
-        return cells[col][height - stackHeights[col]];
+        return cells[col][height - stackHeights[col] - 1];
     }
 }
 
