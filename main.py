@@ -1,4 +1,4 @@
-// cell.hpp
+#cell.hpp
 from enum import Enum
 
 class Condition(Enum):
@@ -27,7 +27,7 @@ class Cell:
     def setState(self, newState):
         self.state = newState
 
-//container.hpp
+#container.hpp
 class Container:
     def __init__(self, description, weight, toOffload=False):
         self.weight = weight
@@ -47,7 +47,7 @@ class Container:
         return self.toOffload
 
 
-//coordinate.cpp
+#coordinate.cpp
 class Coordinate:
     def __init__(self, x, y):
         self.x = x
@@ -68,7 +68,7 @@ class ContainerCoordinate(Coordinate):
         super().__init__(x, y)
         self.isInBuffer = isInBuffer
 
-//port.cpp
+#port.cpp
 class Port:
     def __init__(self, shipSize, bufferSize):
         # field initialization
