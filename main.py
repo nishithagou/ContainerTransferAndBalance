@@ -69,6 +69,14 @@ class ContainerCoordinate(Coordinate):
         self.isInBuffer = isInBuffer
 
 #port.cpp
+
+
+class CraneState:
+    SHIP = 0
+    BUFFER = 1
+    TRUCKBAY = 2
+
+
 class Port:
     def __init__(self, shipSize, bufferSize):
         # field initialization
@@ -105,13 +113,74 @@ class Port:
     def isSolved(self):
         return self.solved
 
+class Transfer:
+    def __init__(self, cranePosition: Coordinate, craneState: CraneState, costToGetHere: int):
+        self.cranePosition = cranePosition
+        self.craneState = craneState
+        self.costToGetHere = costToGetHere
+        self.parent = None
+        self.moveDescription = ""
+
+    def createDerivatative(self, container: Container, end: Coordinate, endSpace: str) -> 'Transfer':
+        deriv = Transfer(self.cranePosition, self.craneState, self.costToGetHere)
+        deriv.parent = self
+        deriv.moveDescription = self.moveDescription
+        translationMove = self.calculateManhattanDistance(self.cranePosition, end, self.craneState, endSpace)
+        deriv.moveContainerAndCrane(container, self.cranePosition, end, self.craneState, endSpace)
+        deriv.costToGetHere += translationMove
+        deriv.calculateAStar()
+        return deriv
+
+    def to_string_basic(self):
+            out = "Ship:\n" + self.ship.to_string_basic() + "\n"
+            out += "To Offload:\n" + "\n".join([f"({c.to_string()}, {cont.to_string()})" for c, cont in self.toOffload]) + "\n"
+            out += "To Stay:\n" + "\n".join([f"({c.to_string()}, {cont.to_string()})" for c, cont in self.toStay]) + "\n"
+            out += "To Load:\n" + "\n".join([f"({c.to_string()}, {cont.to_string()})" for c, cont in self.toLoad]) + "\n"
+            return out
+
+    def updateContainerCoordinateVectors(self, container: Container, newPosition: Coordinate, newSpace: str):
+        if container.isToBeOffloaded:
+            for i, to_offload in enumerate(self.toOffload):
+                if to_offload[1] == container:
+                    if newSpace == "TRUCKBAY":
+                        self.toOffload.pop(i)
+                        return
+
+                    new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
+                    new_coord.isInBuffer = newSpace == "BUFFER"
+                    to_offload[0] = new_coord
+                    return
+
+            raise Exception("Did not find the appropriate container")
+        else:
+            for i, to_stay in enumerate(self.toStay):
+                if to_stay[1] == container:
+                    new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
+                    new_coord.isInBuffer = newSpace == "BUFFER"
+                    to_stay[0] = new_coord
+                    return
+
+            new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
+            new_coord.isInBuffer = newSpace == "BUFFER"
+            to_add = (new_coord, container)
+            to_load.pop()
+            self.toStay.append(to_add)
+
+
+
+
+
 
 class Transfer(Port):
     def __init__(self, shipSize, bufferSize, shipLoad, toLoad):
         # Field Initialization
-        super().__init__(shipSize, bufferSize)
-        self.toOffload = []
-        self.toStay = []
+        #super().__init__(shipSize, bufferSize)
+        #self.toOffload = []
+        #self.toStay = []
+
+        super().__init__()
+        self.ship = Ship(shipSize.x, shipSize.y)
+        self.buffer = Buffer(bufferSize.x, bufferSize.y)
 
         for i in range(len(shipLoad)):
             CO = shipLoad[i][1]
@@ -142,6 +211,13 @@ class Transfer(Port):
         for c in toLoad:
             containerToLoad = (notOnShip, c)
             self.toLoad.append(containerToLoad)
+
+
+
+
+
+
+
 
 def calculate_heuristic(self):
     # this is just the remaining number of containers that need to load. Will just
@@ -203,51 +279,6 @@ def move_container_and_crane(self, container, start, end, start_space, end_space
 
 from typing import List
 
-class Transfer:
-    def __init__(self, cranePosition: Coordinate, craneState: CraneState, costToGetHere: int):
-        self.cranePosition = cranePosition
-        self.craneState = craneState
-        self.costToGetHere = costToGetHere
-        self.parent = None
-        self.moveDescription = ""
-
-    def createDerivatative(self, container: Container, end: Coordinate, endSpace: str) -> 'Transfer':
-        deriv = Transfer(self.cranePosition, self.craneState, self.costToGetHere)
-        deriv.parent = self
-        deriv.moveDescription = self.moveDescription
-        translationMove = self.calculateManhattanDistance(self.cranePosition, end, self.craneState, endSpace)
-        deriv.moveContainerAndCrane(container, self.cranePosition, end, self.craneState, endSpace)
-        deriv.costToGetHere += translationMove
-        deriv.calculateAStar()
-        return deriv
-
-    def updateContainerCoordinateVectors(self, container: Container, newPosition: Coordinate, newSpace: str):
-        if container.isToBeOffloaded:
-            for i, to_offload in enumerate(self.toOffload):
-                if to_offload[1] == container:
-                    if newSpace == "TRUCKBAY":
-                        self.toOffload.pop(i)
-                        return
-
-                    new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
-                    new_coord.isInBuffer = newSpace == "BUFFER"
-                    to_offload[0] = new_coord
-                    return
-
-            raise Exception("Did not find the appropriate container")
-        else:
-            for i, to_stay in enumerate(self.toStay):
-                if to_stay[1] == container:
-                    new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
-                    new_coord.isInBuffer = newSpace == "BUFFER"
-                    to_stay[0] = new_coord
-                    return
-
-            new_coord = ContainerCoordinate(newPosition.x, newPosition.y)
-            new_coord.isInBuffer = newSpace == "BUFFER"
-            to_add = (new_coord, container)
-            to_load.pop()
-            self.toStay.append(to_add)
 
 def calculateManhattanDistance(start, end, startSpace, endSpace):
     if startSpace == endSpace:
@@ -366,7 +397,7 @@ def tryAllOperators(self) -> List[Port]:
             if len(self.toLoad) != 0:
                 acc.append(createDerivatative(None, Coordinate(0, 0), Port.TRUCKBAY))
 
-   if self.craneState == CraneState.BUFFER:
+    if self.craneState == CraneState.BUFFER:
         if self.buffer.getCell(self.cranePosition.x, self.cranePosition.y).getState() != CellState.OCCUPIED:
             raise Exception(5)
 
@@ -507,7 +538,7 @@ class Space:
         self.cells[col][row].setContainer(container)
         self.increaseStackHeight(col, row)
 
-   def removeContainer(self, col, row):
+    def removeContainer(self, col, row):
         if self.cells[col][row].getState() != OCCUPIED:
             raise Exception(9)
         self.cells[col][row].setState(EMPTY)
@@ -528,17 +559,16 @@ class Space:
         return self.height
 
 
-
-
 #adding main function
 from typing import List, Tuple
 from collections import deque
-from port import Port, Transfer, Container, Cell, Coordinate
+
 
 # some hardcoded values to be added
 ship_load: List[Tuple[Cell, Coordinate]] = []
 all_containers: List[Container] = []
-hull = Cell.HULL
+hull = Cell(Condition.HULL)
+
 for i in range(4):
     hull_spot = (hull, Coordinate(0, 8-i))
     ship_load.append(hull_spot)
@@ -558,6 +588,7 @@ to_load = [Container("From truck 1", 100), Container("From truck 2", 200)]
 # from the top
 stack = deque()
 base = Transfer(Coordinate(12,9), Coordinate(24, 5), ship_load, to_load)
+
 # those who do not learn from history are doomed to repeat it literally
 history = set()
 history.add(base.to_string_basic())
