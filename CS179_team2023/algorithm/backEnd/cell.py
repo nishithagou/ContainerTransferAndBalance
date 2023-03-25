@@ -12,6 +12,7 @@ class Cell:
     def __init__(self, state='EMPTY', container=None):
         self.state = state
         self.container = container
+        ("* msg: Cell init() was called")
 
     def setContainer(self, newContainer):
         self.container = newContainer

@@ -16,3 +16,5 @@ class ContainerCoordinate(Coordinate):
     def __init__(self, x, y, isInBuffer=False):
         super().__init__(x, y)
         self.isInBuffer = isInBuffer
+
+        print("* msg: ContainerCoordinate() was called")

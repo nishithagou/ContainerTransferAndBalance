@@ -10,6 +10,7 @@ To compile user interface graphic, we have to install a Tkinter is a standard in
 To install Tkinter, we need Python pre-installed.
 
 command: pip install tk
+command for mac: brew install python-tk
 expected output: Successfully installed tk-0.1.0
 
 Tkinter:
