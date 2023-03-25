@@ -16,5 +16,14 @@ Tkinter:
 Tkinter is a standard library in Python which is used for GUI application. Tkinter has various controls which are used to build a GUI-based application.
 
 
-3. run main file
+3. run main.py file
 
+
+
+
+## Architecture of our program.
+
+1. Back end: 
+2. Front end:
+3. main.py: a driver program that merge Back end and Front end together.
+3. Web application: Graphical user interface for a user.
