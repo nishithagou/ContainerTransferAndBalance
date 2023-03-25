@@ -40,14 +40,19 @@ class Space:
 
     def addContainer(self, col, row, container):
         if self.cells[col][row].getState() != Cell.State.EMPTY:
-            raise Exception(10)
             print("msg: addContainer(empty) was called")
+            raise Exception(10)
         
-        elif self.cells[col][row].getState() == Cell.State.EMPTY:
-                self.cells[col][row].setState(Cell.State.OCCUPIED)
-                self.cells[col][row].setContainer(container)
-                self.increaseStackHeight(col, row)
-                print("msg: addContainer() was called")
+        self.cells[col][row].setState(Cell.State.OCCUPIED)
+        self.cells[col][row].setContainer(container)
+        self.increaseStackHeight(col, row)
+        print("msg: addContainer() ended")
+        
+        # elif self.cells[col][row].getState() == Cell.State.EMPTY:
+        #         self.cells[col][row].setState(Cell.State.OCCUPIED)
+        #         self.cells[col][row].setContainer(container)
+        #         self.increaseStackHeight(col, row)
+        #         print("msg: addContainer() was called")
 
     def removeContainer(self, col, row):
         if self.cells[col][row].getState() != Cell.State.OCCUPIED:
