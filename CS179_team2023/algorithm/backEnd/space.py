@@ -19,6 +19,7 @@ class Space:
         for i in range(width):
             self.stackHeights[i] = 0
             self.cells[i][0] = Cell(Condition.UNOCCUPIABLE)
+            print( "* msg, self.cells",[i],"[0]: ",   self.cells[i][0])
 
 
     def getCell(self, col, row):

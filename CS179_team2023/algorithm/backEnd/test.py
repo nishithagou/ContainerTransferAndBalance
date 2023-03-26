@@ -1,26 +1,24 @@
 #going to test all the classes
 
-
+from container import Container
+import cell
+from enum import Enum
+from space import Space
 import coordinate
-import space
 from cell import Cell
 from coordinate import ContainerCoordinate
 from coordinate import Coordinate
-
 from cell import Condition
 
 print('test.py is running: testing begins for all classes')
 
 
-#1.
+#1. space class
+# hardcoding file for testing
+#testing Cell
+cellTest = Space(3,2)
+#print("Height:" , cellTest.height)
+#print("width:" , cellTest.width)
+count = 0
 
-#2.
-
-
-#3.
-
-
-# space1 = Space(3,5)
-# space1.addContainer(2,4,6)
-# Container.toString()
-# #hardcoding file for testing
+print('cellTest.cells: ', cellTest.cells[0])
