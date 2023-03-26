@@ -1,7 +1,16 @@
 #going to test all the classes
 
 
-print('test.py is running')
+import coordinate
+import space
+from cell import Cell
+from coordinate import ContainerCoordinate
+from coordinate import Coordinate
+
+from cell import Condition
+
+print('test.py is running: testing begins for all classes')
+
 
 #1.
 
