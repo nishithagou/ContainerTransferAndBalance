@@ -3,10 +3,10 @@ import cell
 from enum import Enum
 from space import Space
 import copy
-from except import except 
 
-print (" * message : main.py was compiled")
 
+""" print (" * message : main.py was compiled")
+""" 
 state_Current= 'nonEmpty'
 container_Current = "claire"
 
@@ -15,6 +15,16 @@ container_Current = "claire"
 #space1.addContainer(2,4,6)
 #Container.toString()
 #hardcoding file for testing
+
+
+
+#testing Cell
+cellTest = Space(3,2)
+#print("Height:" , cellTest.height)
+#print("width:" , cellTest.width)
+count = 0
+
+print(cellTest.cells[0]) """ """
 
 def read_manifest():
     containers = []
@@ -41,14 +51,6 @@ def read_manifest():
 x = read_manifest()
 #for cont in x:
 #   print(cont.weight)
-
-#testing Cell
-cellTest = Space(3,2)
-#print("Height:" , cellTest.height)
-#print("width:" , cellTest.width)
-count = 0
-
-print(cellTest.cells[0])
 
 
 
