@@ -1,5 +1,7 @@
 class Container:
 
+    ##this class works
+    
     ##added x and y coords, dont't have to use them but they're helpful for animation
     def __init__(self, description, weight, x, y, toOffload=False):
         self.weight = weight

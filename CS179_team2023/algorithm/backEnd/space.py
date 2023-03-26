@@ -4,6 +4,7 @@ from container import Container
 from cell import Cell
 from enum import Enum
 import copy
+from cell import Condition
 
 ##did not add the assignment and noteq functions at end. are they necessary?
 
@@ -14,13 +15,10 @@ class Space:
         self.cells = [[None] * height for _ in range(width)]
         self.stackHeights = [0] * width
         print( "* msg: Space init() was called")
-        print( "width:", self.width, ",height:", self.height)
-
-        UNOCCUPIABLE= 3 # Temporaily, I hard coded for testing & resolve for error
 
         for i in range(width):
             self.stackHeights[i] = 0
-            self.cells[i][0] = Cell(UNOCCUPIABLE)
+            self.cells[i][0] = Cell(Condition.UNOCCUPIABLE)
 
 
     def getCell(self, col, row):
@@ -41,13 +39,8 @@ class Space:
 
     def addContainer(self, col, row, container):
         if self.cells[col][row].getState() != Cell.State.EMPTY:
-            print("msg: addContainer(empty) was called")
             raise Exception(10)
-        
-            self.cells[col][row].setState(Cell.State.OCCUPIED)
-            self.cells[col][row].setContainer(container)
-            self.increaseStackHeight(col, row)
-            print("msg: addContainer() ended")
+            print("msg: addContainer(empty) was called")
         
         elif self.cells[col][row].getState() == Cell.State.EMPTY:
                 self.cells[col][row].setState(Cell.State.OCCUPIED)

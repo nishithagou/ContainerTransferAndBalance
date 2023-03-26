@@ -12,12 +12,16 @@ class Cell:
     def __init__(self, state='EMPTY', container=None):
         self.state = state
         self.container = container
-        ("* msg: Cell init(state=empty) was called")
+        ("* msg: Cell init() was called")
 
-    def __init__(self, state='nonEMPTY', container="dog"):
+    
+    def __init__(self, state=Condition.EMPTY):
         self.state = state
+        self.container = None
+
+    def __init__(self, container=None):
+        self.state = Condition.OCCUPIED if container is not None else Condition.EMPTY
         self.container = container
-        ("* msg: Cell init(state=nonEmpty) was called")
 
     def setContainer(self, newContainer):
         self.container = newContainer
