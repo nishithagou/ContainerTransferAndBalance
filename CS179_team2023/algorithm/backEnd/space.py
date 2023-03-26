@@ -19,15 +19,17 @@ class Space:
         for i in range(width):
             self.stackHeights[i] = 0
             self.cells[i][0] = Cell(Condition.UNOCCUPIABLE)
+           # print( "* msg, self.cells",[i],"[0]: ,   self.cells[i][0])            self.stackHeights[i] = 0
             print( "* msg, self.cells",[i],"[0]: ",   self.cells[i][0])
+
+        #sprint( "* msg, getCells() self.cells[col][row] ",self.cells[col][row])
 
 
     def getCell(self, col, row):
         return self.cells[col][row]
 
     def getCellState(self, col, row):
-        return self.cells[col][row].getState()
-
+       return self.cells[col][row].getState()
     def setAsHull(self,col, row):
         #Sets a cell like with a ship as a hull thus limiting stack height
         self.increaseStackHeight(col, row)
@@ -39,21 +41,17 @@ class Space:
         self.cells[col][row].setContainer(container)
 
     def addContainer(self, col, row, container):
+       
         if self.cells[col][row].getState() != Cell.State.EMPTY:
-            raise Exception(10)
             print("msg: addContainer(empty) was called")
+            raise Exception(10)
+         
         
         elif self.cells[col][row].getState() == Cell.State.EMPTY:
                 self.cells[col][row].setState(Cell.State.OCCUPIED)
                 self.cells[col][row].setContainer(container)
                 self.increaseStackHeight(col, row)
                 print("msg: addContainer() was called")
-
-    def removeContainer(self, col, row):
-        if self.cells[col][row].getState() != Cell.State.OCCUPIED:
-            raise Exception(9)
-        self.cells[col][row].setState(Cell.State.EMPTY)
-        self.stackHeights[col] = self.stackHeights[col] - 1
 
     def getStackHeight(self, col):
         #Gets the height of the stack at a certain column. No bounds checking
