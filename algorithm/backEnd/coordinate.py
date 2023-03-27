@@ -1,8 +1,9 @@
 class Coordinate:
-    def __init__(self, x, y):
+    def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
 
+    # type hinting with these methods seems to be complaining
     def __ne__(self, other):
         return (self.x != other.x) or (self.y != other.y)
 

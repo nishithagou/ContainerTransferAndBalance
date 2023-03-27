@@ -10,5 +10,6 @@ class Container:
         # self.y = y
         self.to_offload = to_offload
 
-    def to_string(self):
+    # basically equivalent to toString without having to type out toString
+    def __str__(self) -> str:
         return self.description + " (weight: " + str(self.weight) + " kg)"

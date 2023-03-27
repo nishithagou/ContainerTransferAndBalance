@@ -1,11 +1,8 @@
 # space is representaive of the entire ship + buffer
 # basically the whole frame
-from container import Container
 from cell import Cell
-from enum import Enum
-import copy
 from cell import Condition
-from port import Port
+from container import Container
 
 # did not add the assignment and noteq functions at end. are they necessary?
 
@@ -14,72 +11,39 @@ class Space:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        self.cells = [[Cell()] * height for _ in range(width)]
-        self.stackHeights = [0] * width
-        print( "* msg: Space init() was called")
+        self.cells = [[Cell(Condition.EMPTY) for _ in range(height)] for _ in range(width)]
+        # instead of stack heights we are going to be using min_clearance
+        # which stands for minimum clearance in other words what is the index which points to
+        # the "top"
+        self.min_clearance = [height - 1] * width
 
         for i in range(width):
-            self.stackHeights[i] = 0
             self.cells[i][0] = Cell(Condition.UNOCCUPIABLE)
 
+    def get_cell_state(self, col: int, row: int) -> Condition:
+        return self.cells[col][row].state
 
-    def getCell(self, col, row):
-        return self.cells[col][row]
+    def set_as_hull(self, col: int, row: int):
+        if row >= self.min_clearance[col]:
+            self.min_clearance[col] = row - 1
+        self.cells[col][row].state = Condition.HULL
 
-    def getCellState(self, col, row):
-        return self.cells[col][row].getState()
-
-    def setAsHull(self,col, row):
-        #Sets a cell like with a ship as a hull thus limiting stack height
-        self.increaseStackHeight(col, row)
-        self.cells[col][row].setState(Cell.State.HULL)
-
-    def setAsOccupied(self, col, row, container):
-        self.increaseStackHeight(col, row)
-        self.cells[col][row].setState(Cell.State.OCCUPIED)
-        self.cells[col][row].setContainer(container)
-
-    def addContainer(self, col, row, container):
-        if self.cells[col][row].getState() != Cell.State.EMPTY:
-            print("msg: addContainer(empty) was called")
-            raise Exception(10)
+    def add_container(self, col: int, row: int, container: Container):
+        if self.cells[col][row].state is not Condition.EMPTY:
+            raise Exception("Error: adding a container to a nonempty cell")
         
-        elif self.cells[col][row].getState() == Cell.State.EMPTY:
-                self.cells[col][row].setState(Cell.State.OCCUPIED)
-                self.cells[col][row].setContainer(container)
-                self.increaseStackHeight(col, row)
-                print("msg: addContainer() was called")
-
-    def removeContainer(self, col, row):
-        if self.cells[col][row].getState() != Cell.State.OCCUPIED:
-            raise Exception(9)
-        self.cells[col][row].setState(Cell.State.EMPTY)
-        self.stackHeights[col] = self.stackHeights[col] - 1
-
-    def getStackHeight(self, col):
-        #Gets the height of the stack at a certain column. No bounds checking
-        return self.stackHeights[col]
-
-    def increaseStackHeight(self, col, row):
-        self.stackHeights[col] = self.stackHeights[col] + 1
-
-    def getTopPhysicalCell(self, col):
-        #Gets the top-most non-EMPTY cell
-        if self.stackHeights[col] == 0:
-            return Cell(Cell.State.EMPTY)  # no physical cell
         else:
-            # TODO Make sure this logic is correct
-            return self.cells[col][self.height - self.stackHeights[col] - 1]
+            self.cells[col][row].state = Condition.OCCUPIED
+            self.cells[col][row].container = container
+            if row >= self.min_clearance[col]:
+                self.min_clearance[col] = row - 1
 
-    def getWidth(self):
-        return self.width
+    def remove_container(self, col: int, row: int):
+        if self.cells[col][row].state is not Condition.OCCUPIED:
+            raise Exception("Error: Trying to remove a container from a cell which has no container")
+        self.cells[col][row].state = Condition.EMPTY
+        self.min_clearance[col] = self.min_clearance[col] + 1
 
-    def getHeight(self):
-        return self.height
-
-    def __del__(self):
-        self.stackHeights.clear()
-        self.cells.clear()
-
-    def __copy__(self):
-        return Space(self.width, self.height)
+    # way nicer logic with min_clearance than with stack heights
+    def get_top_physical_cell(self, col: int) -> Cell:
+        return self.cells[col][self.min_clearance[col]]
