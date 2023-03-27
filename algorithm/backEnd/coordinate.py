@@ -10,7 +10,7 @@ class Coordinate:
     def __eq__(self, other):
         return (self.x == other.x) and (self.y == other.y)
 
-    def to_string(self):
+    def __str__(self) -> str:
         return "({}, {})".format(self.x, self.y)
 
 
@@ -18,5 +18,3 @@ class ContainerCoordinate(Coordinate):
     def __init__(self, x, y, is_in_buffer=False):
         super().__init__(x, y)
         self.is_in_buffer = is_in_buffer
-
-        # print("* msg: ContainerCoordinate() was called")

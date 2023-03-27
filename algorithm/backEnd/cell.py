@@ -19,5 +19,10 @@ class Cell:
             return "Hull"
         elif self.state is Condition.OCCUPIED:
             if self.container is None:
-                exception()
-            return "Occupied " + self.container
+                raise Exception("Error: Occupied cell has no container")
+            else:
+                return "Occupied " + str(self.container)
+        elif self.state is Condition.EMPTY:
+            return "Empty"
+        else:
+            return "Unoccupiable"
