@@ -1,9 +1,8 @@
 from enum import Enum
 from abc import ABC, abstractmethod
-
-from coordinate import *
-from cell import *
-from space import *
+from coordinate import Coordinate, ContainerCoordinate
+from cell import Cell, Condition
+from space import Space
 
 
 class CraneState(Enum):
@@ -13,9 +12,7 @@ class CraneState(Enum):
 
 
 class Port(ABC):
-    # cost defined as minutes i.e. Manhattan Distance
-    #shipSize => Coordinate
-    #bufferSize => Coordinate
+
     def __init__(self, ship_size: Coordinate, buffer_size: Coordinate):
         # describes the move done; only to be modified in tryAllOperators
         self.moveDescription = ""
@@ -31,214 +28,133 @@ class Port(ABC):
         self.ship = Space(ship_size.x, ship_size.y)
         self.buffer = Space(buffer_size.x, buffer_size.y)
 
-    def eq(self, rhs):
+    def __eq__(self, rhs) -> bool:
         if self.craneState != rhs.craneState:
             return False
         if self.cranePosition != rhs.cranePosition:
             return False
         # find the first thing that is unequal
         # go through the ship's space
-        for row in range(self.ship.getHeight()):
-            for col in range(self.ship.getWidth()):
-                if rhs.ship.getCell(col, row).getState() != self.ship.getCell(col, row).getState():
+        for row in range(self.ship.height):
+            for col in range(self.ship.width):
+                if rhs.ship.cells[col][row] != self.ship.cells[col][row]:
                     return False
         # then the buffer's space room for optimization
-        for row in range(self.buffer.getHeight()):
-            for col in range(self.buffer.getWidth()):
-                if rhs.buffer.getCell(col, row).getState() != self.buffer.getCell(col, row).getState():
+        for row in range(self.buffer.height):
+            for col in range(self.buffer.width):
+                if rhs.buffer.cells[col][row] != self.buffer.cells[col][row]:
                     return False
         return True
 
-    def lessThan(self, rhs):
-        return self.aStarCost < rhs.aStarCost
+    def __lt__(self, other) -> bool:
+        return self.aStarCost < other.aStarCost
 
-    def greaterThan(lhs, rhs):
-        return lhs.aStarCost > rhs.aStarCost
+    def __gt__(self, other) -> bool:
+        return self.aStarCost > other.aStarCost
 
-    def calculateAStar(self):
-        self.aStarCost = self.costToGetHere + self.calculateHeuristic()
+    def calculate_a_star(self):
+        self.aStarCost = self.costToGetHere + self.calculate_heuristic()
 
-    def getMoveDescription(self):
+    def get_move_description(self) -> str:
         return self.moveDescription
 
-    def isSolved(self):
+    def is_solved(self) -> bool:
         return self.solved
 
-    def calculateHeuristic(self):
+    @abstractmethod
+    def calculate_heuristic(self):
         pass
 
-    def calculateManhattanDistance(self, start, end, startSpace, endSpace):
-        if startSpace == endSpace:
+    # start and end coordinates are inclusive
+    def calculate_manhattan_distance(self, start: Coordinate, end: Coordinate,
+                                     start_space: Condition, end_space: Condition):
+        if start_space == end_space:
             # Are we in the buffer or ship?
-            if startSpace == "BUFFER":
-                currSpace = self.buffer
-            else:
-                currSpace = self.ship
-            
+
+            curr_space = self.ship
+            if start_space == CraneState.BUFFER:
+                curr_space = self.buffer
+
             # Actually the most complicated to calculate
-            toMoveX = start.x - end.x
-            SPACE_HEIGHT = currSpace.getHeight()
-            if toMoveX > 0:
+            to_move_x = start.x - end.x
+
+            if to_move_x > 0:
                 # Need to decrement x
-                minDepth = start.y
-                for x in range(start.x, end.x-1, -1):
-                    minClearance = SPACE_HEIGHT - currSpace.getStackHeight(x)
-                    if minDepth <= minClearance:
-                        minDepth = minClearance
-                return (start.y - minDepth) + toMoveX + (end.y - minDepth)
-            elif toMoveX < 0:
+
+                # Find the smallest value of min_clearance
+                min_depth = curr_space.min_clearance[start.x - 1]
+                for x in range(start.x-1, end.x-1, -1):
+                    if min_depth <= curr_space.min_clearance[x]:
+                        min_depth = curr_space.min_clearance[x]
+                return (start.y - min_depth) + to_move_x + (end.y - min_depth)
+            elif to_move_x < 0:
                 # Need to increment x
-                minDepth = start.y
-                for x in range(start.x, end.x+1):
-                    minClearance = SPACE_HEIGHT - currSpace.getStackHeight(x)
-                    if minDepth <= minClearance:
-                        minDepth = minClearance
-                return (start.y - minDepth) + (-toMoveX) + (end.y - minDepth)
+                min_depth = start.y
+                for x in range(start.x - 1, end.x - 1, -1):
+                    if min_depth <= curr_space.min_clearance[x]:
+                        min_depth = curr_space.min_clearance[x]
+                return (start.y - min_depth) + (-to_move_x) + (end.y - min_depth)
             else:
                 # Why are you trying to move within the same column?
                 raise ValueError("Trying to move within the same column")
         # This is an "interspace" transfer so like moving between the buffer/ship/truckbay
         # Actually made easier since the crane always has to go up to 0,0 coordinate
         else:
-            if startSpace == "TRUCKBAY" and endSpace == "TRUCKBAY":
+            if start_space == CraneState.TRUCKBAY and end_space == CraneState.TRUCKBAY:
                 # Illogical move, throw error
                 raise ValueError("Trying to move within the same truckbay")
             # Quite trivial
-            if startSpace == "TRUCKBAY":
+            if start_space == CraneState.TRUCKBAY:
                 return end.x + end.y + 2
-            if endSpace == "TRUCKBAY":
+            if end_space == CraneState.TRUCKBAY:
                 return start.x + start.y + 2
             # Only dealing with distance between ship and buffer also pretty trivial
             return start.x + start.y + end.x + end.y + 4
 
-
-    def toStringFromState(state):
-        if state == "SHIP":
+    @staticmethod
+    def to_string_from_state(state: CraneState) -> str:
+        if state == CraneState.SHIP:
             return "Ship"
-        elif state == "BUFFER":
+        elif state == CraneState.BUFFER:
             return "Buffer"
-        elif state == "TRUCKBAY":
+        elif state == CraneState.TRUCKBAY:
             return "Truck Bay"
         else:
             raise ValueError("Invalid state")
-        
 
-    def tryAllOperators(self):
-        CRANE_COLUMN = self.cranePosition.x
-        acc = []
-        
-        if self.craneState == CraneState.SHIP:
-            if self.cranePosition == Coordinate(0, 0):
-                for i in range(self.ship.getWidth()):
-                    if self.ship.getStackHeight(i) > 0 and self.ship.getTopPhysicalCell(i).getState() != Condition.Hull and i != CRANE_COLUMN:
-                        NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
-                        acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
-                if len(self.toLoad) != 0:
-                    acc.append(self.createDerivatative(None, Coordinate(0, 0), CraneState.TRUCKBAY))
-            else:
-                if self.ship.getCell(self.cranePosition.x, self.cranePosition.y).getState() != Condition.Occupied:
-                    raise ValueError(5)
-                toMove = self.ship.getCell(self.cranePosition.x, self.cranePosition.y).getContainer()
-                if toMove.isToBeOffloaded():
-                    acc.append(self.createDerivatative(toMove, Coordinate(0, 0), CraneState.TRUCKBAY))
-                    return acc
-                for i in range(self.ship.getWidth()):
-                    if self.ship.getStackHeight(i) < self.ship.getHeight() - 1 and i != CRANE_COLUMN:
-                        NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
-                        acc.append(self.createDerivatative(toMove, NEW_COORD, CraneState.SHIP))
-                for i in range(self.buffer.getWidth()):
-                    if self.buffer.getStackHeight(i) < self.buffer.getHeight() - 1:
-                        NEW_COORD = Coordinate(i, self.buffer.getHeight() - self.buffer.getStackHeight(i) - 1)
-                        acc.append(self.createDerivatative(toMove, NEW_COORD, CraneState.BUFFER))
-                for i in range(self.ship.getWidth()):
-                    if self.ship.getStackHeight(i) > 0 and self.ship.getTopPhysicalCell(i).getState() != Condition.Hull and i != CRANE_COLUMN:
-                        NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
-                        acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
-                for i in range(self.buffer.getWidth()):
-                    if self.buffer.getStackHeight(i) > 0:
-                        NEW_COORD = Coordinate(i, self.buffer.getHeight() - self.buffer.getStackHeight(i) - 1)
-                        acc.append(self.createDerivatative(None, NEW_COORD, CraneState.BUFFER))
-                if len(self.toLoad) != 0:
-                    acc.append(self.createDerivatative(None, Coordinate(0, 0), CraneState.TRUCKBAY))
+    @abstractmethod
+    def try_all_operators(self) -> []:
+        pass
                     
-        elif self.craneState == CraneState.BUFFER:
-            if self.buffer.getCell(self.cranePosition.x, self.cranePosition.y).getState() != Condition.Occupied:
-                raise ValueError(5)
-            toMove = self.buffer.getCell(self.cranePosition.x, self.cranePosition.y).getContainer()
-            if toMove.isToBeOffloaded():
-                acc.append(self.createDerivatative(toMove, Coordinate(0, 0), CraneState.TRUCKBAY))
-                return acc
-            for i in range(self.ship.getWidth()):
-                if self.ship.getStackHeight(i) < self.ship.getHeight() - 1:
-                    NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
-                    acc.append(self.createDerivatative(toMove, NEW_COORD, CraneState.SHIP))
-            for i in range(self.buffer.getWidth()):
-                if self.buffer.getStackHeight(i) > 0 and i != CRANE_COLUMN:
-                    NEW_COORD = Coordinate(i, self.buffer.getHeight() - self.buffer.getStackHeight(i)-1)
-                    acc.append(self.createDerivatative(None, NEW_COORD, CraneState.BUFFER))
-            for i in range(self.ship.getWidth()):
-                if self.ship.getStackHeight(i) > 0 and self.ship.getTopPhysicalCell(i).getState() != Condition.HULL:
-                # to create a new ContainerCoordinate in the ship
-                    NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
-                    acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
-            acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
-        
-        elif self.craneState == CraneState.TRUCKBAY:
-            for i in range(self.buffer.get_width()):
-                if self.buffer.get_stack_height(i) > 0:
-                    new_coord = Coordinate(i, self.buffer.get_height() - self.buffer.get_stack_height(i) - 1)
-                    acc.append(self.create_derivative(None, new_coord, self.BufferLocation()))
-
-            for i in range(self.ship.get_width()):
-                if self.ship.get_stack_height(i) > 0 and self.ship.get_top_physical_cell(i).get_state() != Condition.HULL:
-                    new_coord = Coordinate(i, self.ship.get_height() - self.ship.get_stack_height(i) - 1)
-                    acc.append(self.create_derivative(None, new_coord, self.ShipLocation()))
-
-            if len(self.toLoad):
-                to_move = self.toLoad[-1][1]
-                new_to_load = self.toLoad[:-1]
-                for i in range(self.buffer.get_width()):
-                    if self.buffer.get_stack_height(i) < self.buffer.get_height() - 1:
-                        new_coord = Coordinate(i, self.buffer.get_height() - self.buffer.get_stack_height(i) - 1)
-                        acc.append(self.create_derivative(to_move, new_coord, self.BufferLocation()))
-
-                for i in range(self.ship.get_width()):
-                    if self.ship.get_stack_height(i) < self.ship.get_height() - 1:
-                        new_coord = Coordinate(i, self.ship.get_height() - self.ship.get_stack_height(i) - 1)
-                        acc.append(self.create_derivative(to_move, new_coord, self.ShipLocation()))
-        else:
-            raise ValueError(5)
-        return acc
-                    
-            
-    def toStringBasic(self):
+    @abstractmethod
+    def __str__(self):
         pass
 
 
-#class Transfer extends Port
+# class Transfer extends Port
 class Transfer(Port):
-    #shipload is a list of pairs that contain (Cell, Coordinate)
-    def __init__(self, shipSize, bufferSize, shipLoad, toLoad):
-        Port.__init__(self, shipSize, bufferSize)
-        self.toOffload = []
-        self.toLoad = []
-        self.toStay = []
-        for i in range(len(shipLoad)):
-            CO = Coordinate(shipLoad[i][1])
-            CELL = Cell(shipLoad[i][0])
-            if CELL.getState().name == "HULL":
-                self.ship.setAsHull(CO.x, CO.y)
-            elif CELL.getState().name == "OCCUPIED":
-                self.ship.setAsOccupied(CO.x, CO.y, CELL.getContainer())
+    # shipload is a list of pairs that contain (Cell, Coordinate)
+    def __init__(self, ship_size: Coordinate, buffer_size: Coordinate, ship_load: list, to_load: list):
+        Port.__init__(self, ship_size, buffer_size)
+        self.to_offload = []
+        self.to_load = to_load
+        self.to_stay = []
+        for i in range(len(ship_load)):
+            # apparently Python struggles
+            co = ship_load[i][1]
+            cell = Cell(ship_load[i][0])
+            if cell.state == Condition.HULL:
+                self.ship.set_as_hull(co.x, co.y)
+            elif cell.state == Condition.OCCUPIED:
+                self.ship.add_container(co.x, co.y, cell.container)
             else:
-                raise Exception("Invalid state")
-            if CELL.getState().name == "OCCUPIED" and CELL.getContainer().isToBeOffloaded():
-                containerToOffload = (ContainerCoordinate(CO.x, CO.y), CELL.getContainer())
+                raise Exception("Invalid state. Don't try adding Empty cells to the shipload")
+            if cell.state == Condition.OCCUPIED and cell.container.to_offload:
+                container_to_offload = (co, cell.container)
                 self.toOffload.append(containerToOffload)
             elif CELL.getState().name == "OCCUPIED" and not CELL.getContainer().isToBeOffloaded():
                 containerToStay = (ContainerCoordinate(CO.x, CO.y), CELL.getContainer())
                 self.toStay.append(containerToStay)
-        self.toLoad = [(ContainerCoordinate(-1, -1), c) for c in toLoad]
     
     
     def toStringBasic(self):
@@ -359,7 +275,95 @@ class Transfer(Port):
             toAdd = (new_coord, container)
             self.toStay.append(toAdd)
 
+    def try_all_operators(self) -> []:
+        CRANE_COLUMN = self.cranePosition.x
+        acc = []
 
+        if self.craneState == CraneState.SHIP:
+            if self.cranePosition == Coordinate(0, 0):
+                for i in range(self.ship.getWidth()):
+                    if self.ship.getStackHeight(i) > 0 and self.ship.getTopPhysicalCell(
+                            i).getState() != Condition.Hull and i != CRANE_COLUMN:
+                        NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
+                        acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
+                if len(self.toLoad) != 0:
+                    acc.append(self.createDerivatative(None, Coordinate(0, 0), CraneState.TRUCKBAY))
+            else:
+                if self.ship.getCell(self.cranePosition.x, self.cranePosition.y).getState() != Condition.Occupied:
+                    raise ValueError(5)
+                toMove = self.ship.getCell(self.cranePosition.x, self.cranePosition.y).getContainer()
+                if toMove.isToBeOffloaded():
+                    acc.append(self.createDerivatative(toMove, Coordinate(0, 0), CraneState.TRUCKBAY))
+                    return acc
+                for i in range(self.ship.getWidth()):
+                    if self.ship.getStackHeight(i) < self.ship.getHeight() - 1 and i != CRANE_COLUMN:
+                        NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
+                        acc.append(self.createDerivatative(toMove, NEW_COORD, CraneState.SHIP))
+                for i in range(self.buffer.getWidth()):
+                    if self.buffer.getStackHeight(i) < self.buffer.getHeight() - 1:
+                        NEW_COORD = Coordinate(i, self.buffer.getHeight() - self.buffer.getStackHeight(i) - 1)
+                        acc.append(self.createDerivatative(toMove, NEW_COORD, CraneState.BUFFER))
+                for i in range(self.ship.getWidth()):
+                    if self.ship.getStackHeight(i) > 0 and self.ship.getTopPhysicalCell(
+                            i).getState() != Condition.Hull and i != CRANE_COLUMN:
+                        NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
+                        acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
+                for i in range(self.buffer.getWidth()):
+                    if self.buffer.getStackHeight(i) > 0:
+                        NEW_COORD = Coordinate(i, self.buffer.getHeight() - self.buffer.getStackHeight(i) - 1)
+                        acc.append(self.createDerivatative(None, NEW_COORD, CraneState.BUFFER))
+                if len(self.toLoad) != 0:
+                    acc.append(self.createDerivatative(None, Coordinate(0, 0), CraneState.TRUCKBAY))
+
+        elif self.craneState == CraneState.BUFFER:
+            if self.buffer.getCell(self.cranePosition.x, self.cranePosition.y).getState() != Condition.Occupied:
+                raise ValueError(5)
+            toMove = self.buffer.getCell(self.cranePosition.x, self.cranePosition.y).getContainer()
+            if toMove.isToBeOffloaded():
+                acc.append(self.createDerivatative(toMove, Coordinate(0, 0), CraneState.TRUCKBAY))
+                return acc
+            for i in range(self.ship.getWidth()):
+                if self.ship.getStackHeight(i) < self.ship.getHeight() - 1:
+                    NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
+                    acc.append(self.createDerivatative(toMove, NEW_COORD, CraneState.SHIP))
+            for i in range(self.buffer.getWidth()):
+                if self.buffer.getStackHeight(i) > 0 and i != CRANE_COLUMN:
+                    NEW_COORD = Coordinate(i, self.buffer.getHeight() - self.buffer.getStackHeight(i) - 1)
+                    acc.append(self.createDerivatative(None, NEW_COORD, CraneState.BUFFER))
+            for i in range(self.ship.getWidth()):
+                if self.ship.getStackHeight(i) > 0 and self.ship.getTopPhysicalCell(i).getState() != Condition.HULL:
+                    # to create a new ContainerCoordinate in the ship
+                    NEW_COORD = Coordinate(i, self.ship.getHeight() - self.ship.getStackHeight(i) - 1)
+                    acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
+            acc.append(self.createDerivatative(None, NEW_COORD, CraneState.SHIP))
+
+        elif self.craneState == CraneState.TRUCKBAY:
+            for i in range(self.buffer.get_width()):
+                if self.buffer.get_stack_height(i) > 0:
+                    new_coord = Coordinate(i, self.buffer.get_height() - self.buffer.get_stack_height(i) - 1)
+                    acc.append(self.create_derivative(None, new_coord, self.BufferLocation()))
+
+            for i in range(self.ship.get_width()):
+                if self.ship.get_stack_height(i) > 0 and self.ship.get_top_physical_cell(
+                        i).get_state() != Condition.HULL:
+                    new_coord = Coordinate(i, self.ship.get_height() - self.ship.get_stack_height(i) - 1)
+                    acc.append(self.create_derivative(None, new_coord, self.ShipLocation()))
+
+            if len(self.toLoad):
+                to_move = self.toLoad[-1][1]
+                new_to_load = self.toLoad[:-1]
+                for i in range(self.buffer.get_width()):
+                    if self.buffer.get_stack_height(i) < self.buffer.get_height() - 1:
+                        new_coord = Coordinate(i, self.buffer.get_height() - self.buffer.get_stack_height(i) - 1)
+                        acc.append(self.create_derivative(to_move, new_coord, self.BufferLocation()))
+
+                for i in range(self.ship.get_width()):
+                    if self.ship.get_stack_height(i) < self.ship.get_height() - 1:
+                        new_coord = Coordinate(i, self.ship.get_height() - self.ship.get_stack_height(i) - 1)
+                        acc.append(self.create_derivative(to_move, new_coord, self.ShipLocation()))
+        else:
+            raise Exception("Error: Crane is in an invalid state")
+        return acc
 
 
 

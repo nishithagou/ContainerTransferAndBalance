@@ -1,5 +1,6 @@
 from space import Space
 from container import Container
+from cell import Cell, Condition
 
 test = Space(12, 9)
 cells = test.cells
