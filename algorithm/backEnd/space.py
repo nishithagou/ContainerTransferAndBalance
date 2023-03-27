@@ -14,7 +14,7 @@ class Space:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        self.cells = [[None] * height for _ in range(width)]
+        self.cells = [[Cell()] * height for _ in range(width)]
         self.stackHeights = [0] * width
         print( "* msg: Space init() was called")
 
