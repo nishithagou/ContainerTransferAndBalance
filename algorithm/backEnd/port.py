@@ -1,6 +1,5 @@
 from enum import Enum
 from abc import ABC, abstractmethod
-from space import *
 
 from coordinate import *
 from cell import *
