@@ -1,11 +1,9 @@
 from enum import Enum
 from abc import ABC, abstractmethod
-from space import *
 
 from coordinate import *
 from cell import *
 from space import *
-
 
 
 class CraneState(Enum):
@@ -13,11 +11,12 @@ class CraneState(Enum):
     BUFFER = 2
     TRUCKBAY = 3
 
+
 class Port(ABC):
     # cost defined as minutes i.e. Manhattan Distance
     #shipSize => Coordinate
     #bufferSize => Coordinate
-    def __init__(self, shipSize, bufferSize):
+    def __init__(self, ship_size: Coordinate, buffer_size: Coordinate):
         # describes the move done; only to be modified in tryAllOperators
         self.moveDescription = ""
         # parent describes how the Port is derived from
@@ -29,8 +28,8 @@ class Port(ABC):
         # The lower bound number of minutes it has taken and will take for the Port to finish
         self.aStarCost = 0
         self.solved = False
-        self.ship = Space(shipSize.x, shipSize.y)
-        self.buffer = Space(bufferSize.x, bufferSize.y)
+        self.ship = Space(ship_size.x, ship_size.y)
+        self.buffer = Space(buffer_size.x, buffer_size.y)
 
     def eq(self, rhs):
         if self.craneState != rhs.craneState:
