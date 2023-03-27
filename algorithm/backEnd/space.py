@@ -1,5 +1,5 @@
-#space is representaive of the entire ship + buffer
-#basically the whole frame
+# space is representaive of the entire ship + buffer
+# basically the whole frame
 from container import Container
 from cell import Cell
 from enum import Enum
@@ -7,10 +7,11 @@ import copy
 from cell import Condition
 from port import Port
 
-##did not add the assignment and noteq functions at end. are they necessary?
+# did not add the assignment and noteq functions at end. are they necessary?
+
 
 class Space:
-    def __init__(self, width, height):
+    def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
         self.cells = [[None] * height for _ in range(width)]

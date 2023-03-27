@@ -9,12 +9,13 @@ class Coordinate:
     def __eq__(self, other):
         return (self.x == other.x) and (self.y == other.y)
 
-    def toString(self):
+    def to_string(self):
         return "({}, {})".format(self.x, self.y)
 
-class ContainerCoordinate(Coordinate):
-    def __init__(self, x, y, isInBuffer=False):
-        super().__init__(x, y)
-        self.isInBuffer = isInBuffer
 
-        print("* msg: ContainerCoordinate() was called")
+class ContainerCoordinate(Coordinate):
+    def __init__(self, x, y, is_in_buffer=False):
+        super().__init__(x, y)
+        self.is_in_buffer = is_in_buffer
+
+        # print("* msg: ContainerCoordinate() was called")
