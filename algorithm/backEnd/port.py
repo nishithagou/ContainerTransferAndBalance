@@ -178,7 +178,10 @@ class Transfer(Port):
                 elif self.buffer.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
-                    acc += "1"
+                    if self.buffer.cells[col][row].container.to_offload:
+                        acc += "1"
+                    else:
+                        acc += "4"
             acc += "\n"
         if self.crane_state == CraneState.TRUCKBAY:
             acc += "1\n"
@@ -192,7 +195,10 @@ class Transfer(Port):
                 elif self.ship.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
-                    acc += "1"
+                    if self.ship.cells[col][row].container.to_offload:
+                        acc += "1"
+                    else:
+                        acc += "4"
             acc += "\n"
         return acc
     
@@ -377,8 +383,8 @@ class Transfer(Port):
             # search for toOffload
             for i, (coord, c) in enumerate(self.to_offload):
                 # need to do a memory comparison and not a pure value one like with
-                # ==
-                if c is container:
+                # Failed memory comparison will need to use some id system
+                if c.description == container.description:
                     # is the offloaded container now in the trucks?
                     if new_space == CraneState.TRUCKBAY:
                         self.to_offload.pop(i)
@@ -394,17 +400,18 @@ class Transfer(Port):
         else:
             # search for to_stay
             for i, (coord, c) in enumerate(self.to_stay):
-                if c is container:
+                if c.description == container.description:
                     new_coord = ContainerCoordinate(new_position.x, new_position.y)
                     new_coord.is_in_buffer = (new_space == CraneState.BUFFER)
 
                     self.to_stay[i] = (new_coord, container)
                     return
             # did not find the new container, so will add to toStay
-            # assuming it was properly pulled from
+            # assuming it was properly pulled from to_load
             new_coord = ContainerCoordinate(new_position.x, new_position.y)
             new_coord.is_in_buffer = (new_space == CraneState.BUFFER)
             to_add = (new_coord, container)
+            self.to_load.pop()
             self.to_stay.append(to_add)
 
     # no longer updates container vectors

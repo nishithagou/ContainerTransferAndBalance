@@ -9,10 +9,9 @@ ship_load = [(Cell(Condition.HULL), Coordinate(0, 8)), (Cell(Condition.HULL), Co
              (Cell(Condition.OCCUPIED, Container("Meow", 5, True)), Coordinate(1, 8)),
              (Cell(Condition.OCCUPIED, Container("Ruff", 10, False)), Coordinate(1, 7)),
              (Cell(Condition.OCCUPIED, Container("Beep", 7, True)), Coordinate(10, 8))]
-to_load = [Container("Truck Load 1", -1), Container("Truck Load 2", -1)]
+to_load = []  # = [Container("Truck Load 1", -1), Container("Truck Load 2", -1)]
 t = Transfer(Coordinate(12, 9), Coordinate(1, 5), ship_load, to_load)
 history = {str(t)}
-derivs = t.try_all_operators()
 stack = [t]
 solution: Transfer
 while len(stack) > 0:
@@ -20,6 +19,9 @@ while len(stack) > 0:
         print("Found solution")
         solution = stack[-1]
     derivs = stack[-1].try_all_operators()
+    for deriv in derivs:
+        print(str(deriv.a_star_cost))
+        print(str(deriv))
     stack.pop()
     for deriv in derivs:
         if str(deriv) in history:
