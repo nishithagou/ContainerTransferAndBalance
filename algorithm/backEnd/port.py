@@ -31,9 +31,9 @@ class Port(ABC):
         self.buffer = Space(buffer_size.x, buffer_size.y)
 
     def __eq__(self, rhs) -> bool:
-        if self.crane_state != rhs.craneState:
+        if self.crane_state != rhs.crane_state:
             return False
-        if self.crane_position != rhs.cranePosition:
+        if self.crane_position != rhs.crane_position:
             return False
         # find the first thing that is unequal
         # go through the ship's space
@@ -177,7 +177,10 @@ class Transfer(Port):
         for col in range(len(self.buffer.cells)):
             for row in range(len(self.buffer.cells[0])):
                 if self.crane_state == CraneState.BUFFER and self.crane_position == Coordinate(col, row):
-                    acc += "C"
+                    if self.buffer.cells[col][row] != Condition.OCCUPIED:
+                        acc += "C"
+                    else:
+                        acc += "K"
                 elif self.buffer.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
@@ -194,7 +197,10 @@ class Transfer(Port):
         for col in range(len(self.ship.cells)):
             for row in range(len(self.ship.cells[0])):
                 if self.crane_state == CraneState.SHIP and self.crane_position == Coordinate(col, row):
-                    acc += "C"
+                    if self.ship.cells[col][row] != Condition.OCCUPIED:
+                        acc += "C"
+                    else:
+                        acc += "K"
                 elif self.ship.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:

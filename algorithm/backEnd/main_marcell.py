@@ -9,7 +9,7 @@ ship_load = [(Cell(Condition.OCCUPIED, Container("Meow", 5, True)), Coordinate(0
              (Cell(Condition.OCCUPIED, Container("Puff", 8, False)), Coordinate(0, 1)),
              (Cell(Condition.OCCUPIED, Container("Ruff", 10, False)), Coordinate(1, 2)),
              (Cell(Condition.OCCUPIED, Container("Beep", 7, True)), Coordinate(1, 1))]
-to_load = []  # = [Container("Truck Load 1", -1), Container("Truck Load 2", -1)]
+to_load = [Container("Truck Load 1", -1)]
 t = Transfer(Coordinate(2, 3), Coordinate(1, 2), ship_load, to_load)
 history = {str(t)}
 stack = [t]
@@ -23,15 +23,10 @@ while len(stack) > 0:
     stack.pop()
     for deriv in derivs:
         if str(deriv) in history:
-            if deriv is derivs[0]:
-                derivs.popleft()
-                continue
-            elif deriv is derivs[-1]:
-                derivs.pop()
-                break
             derivs.remove(deriv)
         else:
             stack.append(deriv)
+            history.add(str(deriv))
     stack.sort(reverse=True)
 
 recurse: Transfer = solution
@@ -39,6 +34,8 @@ while recurse is not None:
     print(str(recurse))
     print(str(recurse.move_description))
     recurse = recurse.parent
+print(str(solution.cost_to_get_here))
+print(str(len(stack)) + " " + str(len(history)))
 # for i in range(cells.__len__()):
 #     acc = ""
 #     for j in range(cells[0].__len__()):
