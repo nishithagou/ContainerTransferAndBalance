@@ -28,4 +28,7 @@ class Cell:
             return "Unoccupiable"
 
     def __eq__(self, other) -> bool:
-        return self.state == other.state
+        if isinstance(other, Cell):
+            return self.state == other.state
+        if isinstance(other, Condition):
+            return self.state == other

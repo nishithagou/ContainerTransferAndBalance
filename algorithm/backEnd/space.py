@@ -46,4 +46,7 @@ class Space:
 
     # way nicer logic with min_clearance than with stack heights
     def get_top_physical_cell(self, col: int) -> Cell:
-        return self.cells[col][self.min_clearance[col]]
+        if self.min_clearance[col] == self.height - 1:
+            # no physical cell so return the empty cell
+            return Cell()
+        return self.cells[col][self.min_clearance[col] + 1]
