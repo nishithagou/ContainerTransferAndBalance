@@ -69,7 +69,7 @@ class Port(ABC):
 
     # start and end coordinates are inclusive
     def calculate_manhattan_distance(self, start: Coordinate, end: Coordinate,
-                                     start_space: CraneState, end_space: CraneState):
+                                     start_space: CraneState, end_space: CraneState) -> int:
         if start_space == end_space:
             # Are we in the buffer or ship?
 
@@ -97,14 +97,17 @@ class Port(ABC):
                         min_depth = curr_space.min_clearance[x]
                 return (start.y - min_depth) + (-to_move_x) + (end.y - min_depth)
             else:
-                # Why are you trying to move within the same column?
-                raise ValueError("Trying to move within the same column")
+                if not(start_space == CraneState.SHIP and start == Coordinate(0, 0)):
+                    # Why are you trying to move within the same column?
+                    raise Exception("Trying to move within the same column")
+                else:
+                    return end.x + end.y
         # This is an "interspace" transfer so like moving between the buffer/ship/truckbay
         # Actually made easier since the crane always has to go up to 0,0 coordinate
         else:
             if start_space == CraneState.TRUCKBAY and end_space == CraneState.TRUCKBAY:
                 # Illogical move, throw error
-                raise ValueError("Trying to move within the same truckbay")
+                raise Exception("Trying to move within the same truckbay")
             # Quite trivial
             if start_space == CraneState.TRUCKBAY:
                 return end.x + end.y + 2
@@ -122,7 +125,7 @@ class Port(ABC):
         elif state == CraneState.TRUCKBAY:
             return "Truck Bay"
         else:
-            raise ValueError(f"Invalid state: {CraneState}")
+            raise Exception(f"Invalid state: {CraneState}")
 
     @abstractmethod
     def try_all_operators(self) -> []:
@@ -174,31 +177,33 @@ class Transfer(Port):
         for col in range(len(self.buffer.cells)):
             for row in range(len(self.buffer.cells[0])):
                 if self.crane_state == CraneState.BUFFER and self.crane_position == Coordinate(col, row):
-                    acc += "2"
+                    acc += "C"
                 elif self.buffer.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
                     if self.buffer.cells[col][row].container.to_offload:
-                        acc += "1"
+                        acc += "U"
                     else:
-                        acc += "4"
+                        acc += "S"
             acc += "\n"
         if self.crane_state == CraneState.TRUCKBAY:
-            acc += "1\n"
+            acc += "C\n"
         else:
             acc += "0\n"
         # iterate through ship
         for col in range(len(self.ship.cells)):
             for row in range(len(self.ship.cells[0])):
                 if self.crane_state == CraneState.SHIP and self.crane_position == Coordinate(col, row):
-                    acc += "2"
+                    acc += "C"
                 elif self.ship.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
                     if self.ship.cells[col][row].container.to_offload:
-                        acc += "1"
+                        acc += "U"
+                        # U for unload
                     else:
-                        acc += "4"
+                        acc += "S"
+                        # S for stay
             acc += "\n"
         return acc
     
