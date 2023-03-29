@@ -13,12 +13,90 @@ class CraneState(Enum):
     TRUCKBAY = 3
 
 
+class MoveSequence:
+
+    def __init__(self, start: Coordinate, end: Coordinate, start_space: CraneState, end_space: CraneState,
+                 holds_container: bool = False, highest_clearance: int = 0):
+        self.start = start
+        self.end = end
+        self.start_space = start_space
+        self.end_space = end_space
+        self.holds_container = holds_container
+        self.highest_clearance = highest_clearance
+
+    def generate_animation_sequence(self) -> list:
+        acc = []
+        if self.start_space == CraneState.TRUCKBAY:
+            acc.append(ContainerCoordinate(-1, 0))
+            going_to_buffer = False
+            if self.end_space == CraneState.BUFFER:
+                going_to_buffer = True
+            # move horizontally
+            for col in range(self.end.x + 1):
+                acc.append(ContainerCoordinate(col, 0, going_to_buffer))
+            # move vertically
+            for row in range(1, self.end.y + 1):
+                acc.append(ContainerCoordinate(self.end.x, row, going_to_buffer))
+            return acc
+        elif self.end_space == CraneState.TRUCKBAY:
+            from_buffer = False
+            if self.start_space == CraneState.BUFFER:
+                from_buffer = True
+
+            # move vertically up
+            for row in range(self.start.y, -1, -1):
+                acc.append(ContainerCoordinate(self.start.x, row, from_buffer))
+            # move horizontally to 0,0
+            for col in range(self.start.x - 1, -1, -1):
+                acc.append(ContainerCoordinate(col, 0, from_buffer))
+            acc.append(ContainerCoordinate(-1, 0))
+            return acc
+        elif self.end_space == self.start_space:
+            # intra space transfer
+            # will neccessarily be only in the ship space
+            # go up
+            for row in range(self.start.y, self.highest_clearance - 1, -1):
+                acc.append(ContainerCoordinate(self.start.x, row))
+            # are we moving left or right?
+            if self.start.x > self.end.x:
+                # moving left so must decrease x
+                for col in range(self.start.x - 1, self.end.x - 1, - 1):
+                    acc.append(ContainerCoordinate(col, self.highest_clearance))
+            else:
+                for col in range(self.start.x, self.end.x + 1):
+                    acc.append(ContainerCoordinate(col, self.highest_clearance))
+            # go down
+            for row in range(self.highest_clearance + 1, self.end.y + 1):
+                acc.append(ContainerCoordinate(self.end.x, row))
+            return acc
+        elif self.end_space != self.start_space:
+            # interspace transfer
+            in_buffer = False
+            if self.start_space == CraneState.BUFFER:
+                in_buffer = True
+            # move vertically up
+            for row in range(self.start.y, -1, -1):
+                acc.append(ContainerCoordinate(self.start.x, row, in_buffer))
+            # move horizontally to 0,0
+            for col in range(self.start.x - 1, -1, -1):
+                acc.append(ContainerCoordinate(col, 0, in_buffer))
+            # switch spaces
+            for col in range(self.end.x + 1):
+                acc.append(ContainerCoordinate(col, 0, in_buffer))
+            # move vertically
+            for row in range(1, self.end.y + 1):
+                acc.append(ContainerCoordinate(self.end.x, row, in_buffer))
+        return acc
+
+
 class Port(ABC):
 
     def __init__(self, ship_size: Coordinate, buffer_size: Coordinate):
         # describes the move done; only to be modified in tryAllOperators
-        self.move_sequence = list
+        self.move_sequence: MoveSequence = MoveSequence(Coordinate(0, 0), Coordinate(0, 0),
+                                                        CraneState.SHIP, CraneState.SHIP)
         self.move_description = ""
+        self.previous_crane_only_move = False
         # parent describes how the Port is derived from
         self.parent = None
         self.crane_position = Coordinate(0, 0)
@@ -358,12 +436,25 @@ class Transfer(Port):
         # Create a copy of the current transfer state
         deriv = copy.deepcopy(self)
         deriv.parent = self
-        
+
+        if container is None:
+            deriv.previous_crane_only_move = True
+        else:
+            deriv.previous_crane_only_move = False
+
         # Calculate the manhattan distance between the crane's current position and the end position
         translation_move = self.calculate_manhattan_distance(self.crane_position, end, self.crane_state, end_space)
         
         # Move the crane and container to the specified end coordinates and update the transfer state
         deriv.move_container_and_crane(container, self.crane_position, end, self.crane_state, end_space)
+
+        holds_container = container is not None
+        if self.crane_state != end_space:
+            deriv.move_sequence = MoveSequence(self.crane_position, end, self.crane_state, end_space, holds_container)
+        else:
+            # TODO: Check for minimum clearance
+            deriv.move_sequence = MoveSequence(self.crane_position, end, self.crane_state, end_space, holds_container,
+                                               0)
 
         # update the Transfer's internal vectors
         deriv.update_container_coordinate_vectors(container, end, end_space)
@@ -429,15 +520,16 @@ class Transfer(Port):
                     acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY, to_move))
                     return acc
 
-                # moving crane in ship to another spot in the ship
-                acc += self.iterate_through_space(CraneState.SHIP)
+                if not self.previous_crane_only_move:
+                    # moving crane in ship to another spot in the ship
+                    acc += self.iterate_through_space(CraneState.SHIP)
 
-                # moving crane in ship to another spot in the buffer
-                acc += self.iterate_through_space(CraneState.BUFFER)
+                    # moving crane in ship to another spot in the buffer
+                    acc += self.iterate_through_space(CraneState.BUFFER)
 
-                # move crane itself to the trucks
-                if len(self.to_load) != 0:
-                    acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
+                    # move crane itself to the trucks
+                    if len(self.to_load) != 0:
+                        acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
 
                 # moving container in ship to another spots in ship
                 acc += self.iterate_through_space(CraneState.SHIP, to_move)
@@ -468,17 +560,19 @@ class Transfer(Port):
             # moving crane in buffer to another spot in the ship
             acc += self.iterate_through_space(CraneState.SHIP)
 
-            # moving crane in buffer to the Truck bay
-            if len(self.to_load) > 0:
-                acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
+            if not self.previous_crane_only_move:
+                # moving crane in buffer to the Truck bay
+                if len(self.to_load) > 0:
+                    acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
 
         elif self.crane_state == CraneState.TRUCKBAY:
 
-            # moving from truck bay to buffer with just the crane
-            acc += self.iterate_through_space(CraneState.BUFFER)
+            if not self.previous_crane_only_move:
+                # moving from truck bay to buffer with just the crane
+                acc += self.iterate_through_space(CraneState.BUFFER)
 
-            # moving from truck bay to ship with just the crane
-            acc += self.iterate_through_space(CraneState.SHIP)
+                # moving from truck bay to ship with just the crane
+                acc += self.iterate_through_space(CraneState.SHIP)
 
             if len(self.to_load) > 0:
                 to_move = self.to_load[-1]
