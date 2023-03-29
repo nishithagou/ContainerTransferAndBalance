@@ -15,14 +15,20 @@ class Cell:
         self.container = container
 
     def __str__(self) -> str:
-        if self.state is Condition.HULL:
+        if self.state == Condition.HULL:
             return "Hull"
-        elif self.state is Condition.OCCUPIED:
+        elif self.state == Condition.OCCUPIED:
             if self.container is None:
                 raise Exception("Error: Occupied cell has no container")
             else:
                 return "Occupied " + str(self.container)
-        elif self.state is Condition.EMPTY:
+        elif self.state == Condition.EMPTY:
             return "Empty"
         else:
             return "Unoccupiable"
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Cell):
+            return self.state == other.state
+        if isinstance(other, Condition):
+            return self.state == other

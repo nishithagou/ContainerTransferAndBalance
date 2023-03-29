@@ -1,13 +1,13 @@
 class Container:
-
-    # this class works
+    # static variable
+    static_id: int = 0
 
     # added x and y coords, don't have to use them but they're helpful for animation
     def __init__(self, description: str, weight: int, to_offload: bool = False):
         self.weight = weight
         self.description = description
-        # self.x = x
-        # self.y = y
+        self.id: int = Container.static_id
+        Container.static_id = Container.static_id + 1
         self.to_offload = to_offload
 
     # basically equivalent to toString without having to type out toString
