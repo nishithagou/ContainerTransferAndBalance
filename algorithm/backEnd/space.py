@@ -24,7 +24,7 @@ class Space:
         return self.cells[col][row].state
 
     def set_as_hull(self, col: int, row: int):
-        if row >= self.min_clearance[col]:
+        if row <= self.min_clearance[col]:
             self.min_clearance[col] = row - 1
         self.cells[col][row].state = Condition.HULL
 
@@ -35,7 +35,8 @@ class Space:
         else:
             self.cells[col][row].state = Condition.OCCUPIED
             self.cells[col][row].container = container
-            if row >= self.min_clearance[col]:
+            if row <= self.min_clearance[col]:
+                # presume row 7 occupied and adding row 8
                 self.min_clearance[col] = row - 1
 
     def remove_container(self, col: int, row: int):
