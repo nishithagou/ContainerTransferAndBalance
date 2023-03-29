@@ -50,9 +50,13 @@ class Port(ABC):
         return True
 
     def __lt__(self, other) -> bool:
+        if self.a_star_cost == other.a_star_cost:
+            return self.cost_to_get_here < other.cost_to_get_here
         return self.a_star_cost < other.a_star_cost
 
     def __gt__(self, other) -> bool:
+        if self.a_star_cost == other.a_star_cost:
+            return self.cost_to_get_here > other.cost_to_get_here
         return self.a_star_cost > other.a_star_cost
 
     def calculate_a_star(self):
@@ -146,18 +150,16 @@ class Port(ABC):
 class SIFT(Port):
     def __init__(self, ship_size: Coordinate, buffer_size: Coordinate, ship_load: list):
         Port.__init__(self, ship_size, buffer_size)
-        self.containers = list
-        self.SIFT_solution = Space(ship_size.x, ship_size.y)
+        self.containers = []
         # a weight yields a list of coordinates where the containers can go
-        self.unique_weights = dict
-        self.container_index = dict
+        self.unique_weights = {}
+        self.container_index = {}
         c_index = 65
         for i in range(len(ship_load)):
             cell = ship_load[i][0]
             co = ship_load[i][1]
             if cell.state == Condition.HULL:
                 self.ship.set_as_hull(co.x, co.y)
-                self.SIFT_solution.set_as_hull(co.x, co.y)
                 # don't need to bother with checking with loads if we know a cell is the hull
                 continue
             elif cell.state == Condition.OCCUPIED:
@@ -176,7 +178,7 @@ class SIFT(Port):
         for i in range(len(self.containers)):
             while self.ship.get_cell_state(col, row) == Condition.HULL:
                 if col == self.ship.width - 1:
-                    row = row - 1 # reset column
+                    row = row - 1  # reset column
                     col = self.ship.width // 2 - 1
                 else:
                     if col <= self.ship.width // 2 - 1:
@@ -186,10 +188,22 @@ class SIFT(Port):
                         # flip to left side
                         col = (self.ship.width - (col + 1)) - 1
             c = self.containers[i][1]
-            if self.unique_weights[c.weight] is None:
-                self.unique_weights[c.weight] = [Coordinate(col, row)]
-            else:
+
+            try:
+                test = self.unique_weights[c.weight]
                 self.unique_weights[c.weight].append(Coordinate(col, row))
+            except KeyError:
+                self.unique_weights[c.weight] = [Coordinate(col, row)]
+            if col == self.ship.width - 1:
+                row = row - 1  # reset column
+                col = self.ship.width // 2 - 1
+            else:
+                if col <= self.ship.width // 2 - 1:
+                    # flip to other side right side
+                    col = self.ship.width - (col + 1)
+                else:
+                    # flip to left side
+                    col = (self.ship.width - (col + 1)) - 1
 
     def calculate_heuristic(self) -> int:
         return 0
@@ -209,6 +223,14 @@ class SIFT(Port):
                     acc += "0"
                 else:
                     acc += str(self.container_index[self.buffer.cells[col][row].container.id])
+            acc += "\n"
+        for col in range(self.ship.width):
+            for row in range(self.ship.height):
+                if self.buffer.get_cell_state(col, row) != Condition.OCCUPIED:
+                    acc += "0"
+                else:
+                    acc += str(self.container_index[self.buffer.cells[col][row].container.id])
+            acc += "\n"
         return acc
 
 
