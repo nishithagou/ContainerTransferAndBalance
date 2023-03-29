@@ -2,6 +2,7 @@ import datetime
 import tkinter as tk
 import time
 
+
 class container:
     def __init__(self, description, weight, x, y, toOffload=False):
         self.weight = weight
@@ -66,20 +67,6 @@ def signout(first_name, last_name, log_file):
         return signin(first_name, last_name, log_file)
     else:
         return [first_name, last_name]
-    
-
-
-    
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -88,38 +75,47 @@ def signout(first_name, last_name, log_file):
 
 #***************************************ANIMATION PART************************************#
 #defining size vals for grid
-ROWS = 8
+ROWS = 9
 COLS = 12
 SQUARE_SIZE = 50
 WINDOW_WIDTH = COLS * SQUARE_SIZE * 2
 WINDOW_HEIGHT = ROWS * SQUARE_SIZE * 2
 
+running = True
 
 def draw_grid(canvas, rows, cols, width, height, objects_list):
+    if(running):
     
-    labels = [None] * (rows * cols)
-    #count = 0
-    for obj in objects_list:
-        #print(obj.description)
-        #count+=1
-        x, y = obj.y - 1, obj.x - 1
-        if 0 <= x < cols and 0 <= y < rows:
-            index = y * cols + x
-            labels[index] = obj.description
+        labels = [None] * (rows * cols)
+        #count = 0
+        for obj in objects_list:
+            #print(obj.description)
+            #count+=1
+            x, y = obj.y - 1, obj.x - 1
+            if 0 <= x < cols and 0 <= y < rows:
+                index = y * cols + x
+                labels[index] = obj.description
 
-    # Draw grid and labels
-    for row in range(rows):
-        for col in range(cols):
-            x1 = col * width
-            y1 = (rows - row - 1) * height
-            x2 = x1 + width
-            y2 = y1 + height
-            index = row * cols + col
-            canvas.create_rectangle(x1, y1, x2, y2, outline='black')
-            #print("Going to draw grid.")
-            if labels[index]:
-                label = tk.Label(canvas, text=labels[index])
-                label.place(x=x1+5, y=y1+5)
+        # Draw grid and labels
+        for row in range(rows):
+            for col in range(cols):
+                x1 = col * width
+                y1 = (rows - row - 1) * height
+                x2 = x1 + width
+                y2 = y1 + height
+                index = row * cols + col
+                if row == 8:  # If current cell is in top row
+                    canvas.create_rectangle(x1, y1, x2, y2, fill='light gray', outline='black')
+                    #label = tk.Label(canvas, text='buffer')
+                    #label.place(x=x1+5, y=y1+5)
+                elif(labels[index] != "NAN" and labels[index] != "UNUSED" ):
+                    canvas.create_rectangle(x1, y1, x2, y2, fill='blue', outline='black')
+                else:
+                    canvas.create_rectangle(x1, y1, x2, y2, outline='black')
+                #print("Going to draw grid.")
+                if labels[index]:
+                    label = tk.Label(canvas, text=labels[index])
+                    label.place(x=x1+5, y=y1+5)
 
 
 def move_box(canvas, box, coords_list):
@@ -134,16 +130,16 @@ def move_box(canvas, box, coords_list):
     current_x, current_y = coords_list[0]
     next_x, next_y = coords_list[1] if len(coords_list) > 1 else coords_list[0]
 
-    # calculate coordinates of line to move box along
+    # calculate coordinates of line to move the box
     start_x = current_x * width + width / 2
     start_y = (8 - current_y - 1) * height + height / 2
     end_x = next_x * width + width / 2
     end_y = (8 - next_y - 1) * height + height / 2
 
-    # draw line between current and next coordinates
+    # this part helps the movement work smoother, ik it looks ugly
     line = canvas.create_line(start_x, start_y, end_x, end_y)
 
-    # move box along line
+    #moving box
     for i in range(1, 101):
         # calculate new position of box
         x = start_x + (end_x - start_x) * i / 100
@@ -152,7 +148,7 @@ def move_box(canvas, box, coords_list):
         canvas.update()
         time.sleep(0.0000005)
 
-    # remove line and move to next coordinate
+    #go to next coord
     canvas.delete(line)
     canvas.after(0, lambda: move_box(canvas, box, coords_list[1:]))
 
@@ -176,14 +172,33 @@ def finalDraw(containerList):
     move_box(canvas, box, coords_list)
     window.mainloop()
 
+done_state = False
+
+def done_button_click():
+    global done_state
+    if done_state:
+        print("Button is now off")
+        done_state = False
+    else:
+        print("Button is now on")
+        done_state = True
 
 
-
+def logout_button_click():
+    # Set the global animation_running flag to False to stop the animation
+    global running
+    running = False
+    print("Logout button was clicked")    
 
 #**********************************************************command line interactions*****************************************************************
 #the container coords have to be reversed, so x =>y and y =>x
-coords_list = [[(0, 0), (0, 1), (0,2), (0,3), (0,4), (0,5)], 
-               [(7,1), (8,1), (9,1)]]
+
+
+
+
+coords_list = [[(0, 0), (0, 1), (0,2), (0,3)], 
+               [(7,1), (8,1), (9,1)],
+               [(0, 0), (0, 1), (0,2), (0,3)]]
 
 log_file = open("logfile.txt", "a")
 print("Hello welcome to Mr.Keogh's Port!!! \n")
@@ -198,34 +213,37 @@ print("Hello " + first_name + " " + last_name)
 containers = read_manifest('ShipCase2.txt')
 log_file.write(str(datetime.datetime.now()) + " Manifest " + 'ShipCase3.txt'+ " was opened, there are " + str(len(containers)) + " containers on the ship\n")
 #print the initial ship configuration
+print("This is your ship.")
 window = tk.Tk()
 canvas = tk.Canvas(window, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
+#done_button = tk.Button(window, text="Step Completed", command=done_button_click, width = 15, height = 3)
+#done_button.pack(side=tk.BOTTOM)
+
+#logout_button = tk.Button(window, text="Logout", command=logout_button_click, width=14, height=3)
+#logout_button.pack(side=tk.BOTTOM)
+
 canvas.pack()
-draw_grid(canvas, 8, 12, 100, 100, containers)
+draw_grid(canvas, 9, 12, 100, 100, containers)
 #print(coords_list[0])
 box = canvas.create_rectangle(0, 0, 100, 100, fill='red')
-print("This is the first step of actions:")
-move_box(canvas, box, coords_list[0])
-yorn = input("Did you complete that step? (Y or N)")
-if(yorn == 'Y'):
-    move_box(canvas, box, coords_list[1])
-   
 
-
-
-
-
-
-
-
-
-
-
-
-##will add a button to close the pop up window but click the x for now to resume program
 operation = int(input("Please select which operation you would like to perform. 1. Load/Unload containers 2.Balance "))
+toOff = []
+toOn = []
 if(operation == 1):
     print("You chose to load/unload containers.")
+    off = input("Please enter the name of the containers you would like to unload. Press q when done. ")
+    while(off != 'q'):
+        toOff.append(off)
+        off = input("Please enter the name of the containers you would like to unload. Press q when done. ")
+    print(toOff)
+    on = input("Please enter the name of the containers you would like to load.")
+    while(on != 'q'):
+        weight = input("Please enter the weight of that container. Press q when done ")
+        on = input("Please enter the name of the containers you would like to unload. Press q when done. ")
+        toOn.append(container(on,weight,0,0))
+    print(toOn)
+
 elif(operation == 2):
     print("You chose to balance the ship.")
 else:
@@ -235,5 +253,49 @@ else:
         print("You chose to load/unload containers.")
     elif(operation == 2):
         print("You chose to balance the ship.")
+
+print("This are the action step:")
+for i in range(0,len(coords_list)):
+    move_box(canvas, box, coords_list[i])
+print("Done")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
