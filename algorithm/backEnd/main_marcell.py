@@ -5,12 +5,13 @@ from port import Transfer
 from coordinate import Coordinate
 
 
-ship_load = [(Cell(Condition.OCCUPIED, Container("Meow", 5, True)), Coordinate(0, 2)),
-             (Cell(Condition.OCCUPIED, Container("Puff", 8, False)), Coordinate(0, 1)),
-             (Cell(Condition.OCCUPIED, Container("Ruff", 10, False)), Coordinate(1, 2)),
-             (Cell(Condition.OCCUPIED, Container("Beep", 7, True)), Coordinate(1, 1))]
-to_load = [Container("Truck Load 1", -1)]
-t = Transfer(Coordinate(2, 3), Coordinate(1, 2), ship_load, to_load)
+ship_load = [(Cell(Condition.OCCUPIED, Container("Meow", 5, True)), Coordinate(0, 8)),
+             (Cell(Condition.OCCUPIED, Container("Puff", 8, True)), Coordinate(1, 8)),
+             (Cell(Condition.OCCUPIED, Container("Ruff", 10, True)), Coordinate(2, 8)),
+             (Cell(Condition.OCCUPIED, Container("Beep", 7, True)), Coordinate(3, 8))]
+to_load = [Container("Truck Load 1", -1), Container("Truck Load 2", -1)]
+t = Transfer(Coordinate(4, 9), Coordinate(1, 2), ship_load, to_load)
+print(str(t))
 history = {str(t)}
 stack = [t]
 solution: Transfer = t
@@ -28,6 +29,9 @@ while len(stack) > 0:
             stack.append(deriv)
             history.add(str(deriv))
     stack.sort(reverse=True)
+    # if len(stack) % 100 == 0:
+    #     print(str(stack[-1]))
+    #     print(str(len(stack)))
 
 recurse: Transfer = solution
 while recurse is not None:

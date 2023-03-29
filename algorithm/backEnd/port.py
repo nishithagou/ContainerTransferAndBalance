@@ -17,6 +17,7 @@ class Port(ABC):
 
     def __init__(self, ship_size: Coordinate, buffer_size: Coordinate):
         # describes the move done; only to be modified in tryAllOperators
+        self.move_sequence = list
         self.move_description = ""
         # parent describes how the Port is derived from
         self.parent = None
@@ -141,6 +142,76 @@ class Port(ABC):
         pass
 
 
+# class SIFT extends Port
+class SIFT(Port):
+    def __init__(self, ship_size: Coordinate, buffer_size: Coordinate, ship_load: list):
+        Port.__init__(self, ship_size, buffer_size)
+        self.containers = list
+        self.SIFT_solution = Space(ship_size.x, ship_size.y)
+        # a weight yields a list of coordinates where the containers can go
+        self.unique_weights = dict
+        self.container_index = dict
+        c_index = 65
+        for i in range(len(ship_load)):
+            cell = ship_load[i][0]
+            co = ship_load[i][1]
+            if cell.state == Condition.HULL:
+                self.ship.set_as_hull(co.x, co.y)
+                self.SIFT_solution.set_as_hull(co.x, co.y)
+                # don't need to bother with checking with loads if we know a cell is the hull
+                continue
+            elif cell.state == Condition.OCCUPIED:
+                self.ship.add_container(co.x, co.y, cell.container)
+                self.containers.append((ContainerCoordinate(co.x, co.y), cell.container))
+                self.container_index[cell.container.id] = chr(c_index)
+                c_index = c_index + 1
+        self.calculate_solution()
+
+    def calculate_solution(self):
+        # sort containers heaviest to lightest
+        self.containers.sort(key= lambda x:x[1].weight, reverse=True)
+        row: int = self.ship.height - 1
+        # integer division
+        col: int = self.ship.width // 2 - 1
+        for i in range(len(self.containers)):
+            while self.ship.get_cell_state(col, row) == Condition.HULL:
+                if col == self.ship.width - 1:
+                    row = row - 1 # reset column
+                    col = self.ship.width // 2 - 1
+                else:
+                    if col <= self.ship.width // 2 - 1:
+                        # flip to other side right side
+                        col = self.ship.width - (col + 1)
+                    else:
+                        # flip to left side
+                        col = (self.ship.width - (col + 1)) - 1
+            c = self.containers[i][1]
+            if self.unique_weights[c.weight] is None:
+                self.unique_weights[c.weight] = [Coordinate(col, row)]
+            else:
+                self.unique_weights[c.weight].append(Coordinate(col, row))
+
+    def calculate_heuristic(self) -> int:
+        return 0
+
+    def move_container_and_crane(self, container: Container, start: Coordinate, end: Coordinate,
+                                 start_space: CraneState, end_space: CraneState):
+        pass
+
+    def try_all_operators(self) -> []:
+        return list
+
+    def __str__(self):
+        acc = ""
+        for col in range(self.buffer.width):
+            for row in range(self.buffer.height):
+                if self.buffer.get_cell_state(col, row) != Condition.OCCUPIED:
+                    acc += "0"
+                else:
+                    acc += str(self.container_index[self.buffer.cells[col][row].container.id])
+        return acc
+
+
 # class Transfer extends Port
 class Transfer(Port):
     # shipload is a list of pairs that contain (Cell, Coordinate)
@@ -173,14 +244,16 @@ class Transfer(Port):
     # for hashing
     def __str__(self) -> str:
         acc = ""
-
         for col in range(len(self.buffer.cells)):
             for row in range(len(self.buffer.cells[0])):
                 if self.crane_state == CraneState.BUFFER and self.crane_position == Coordinate(col, row):
                     if self.buffer.cells[col][row] != Condition.OCCUPIED:
                         acc += "C"
                     else:
-                        acc += "K"
+                        if self.buffer.cells[col][row].container.to_offload:
+                            acc += "T"
+                        else:
+                            acc += "K"
                 elif self.buffer.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
@@ -200,7 +273,10 @@ class Transfer(Port):
                     if self.ship.cells[col][row] != Condition.OCCUPIED:
                         acc += "C"
                     else:
-                        acc += "K"
+                        if self.ship.cells[col][row].container.to_offload:
+                            acc += "T"
+                        else:
+                            acc += "K"
                 elif self.ship.cells[col][row] != Condition.OCCUPIED:
                     acc += "0"
                 else:
@@ -293,6 +369,9 @@ class Transfer(Port):
                 if space.get_top_physical_cell(col).state == Condition.OCCUPIED:
                     end = Coordinate(col, space.min_clearance[col] + 1)
                     acc.append(self.create_derivative(end, end_space))
+                    # do not need to simulate going to all spots in the buffer
+                    if end_space == CraneState.BUFFER:
+                        break
         else:
             for col in range(space.width):
                 if col == self.crane_position.x and end_space == self.crane_state:
@@ -301,6 +380,9 @@ class Transfer(Port):
                 if space.min_clearance[col] > 0:
                     end = Coordinate(col, space.min_clearance[col])
                     acc.append((self.create_derivative(end, end_space, container)))
+                    # just simulate moving the container to the closest possible space in the buffer
+                    if end_space == CraneState.BUFFER:
+                        break
         return acc
 
     def try_all_operators(self) -> []:
@@ -325,12 +407,6 @@ class Transfer(Port):
                     acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY, to_move))
                     return acc
 
-                # moving container in ship to another spots in ship
-                acc += self.iterate_through_space(CraneState.SHIP, to_move)
-
-                # moving container in ship to another spots in buffer
-                acc += self.iterate_through_space(CraneState.BUFFER, to_move)
-
                 # moving crane in ship to another spot in the ship
                 acc += self.iterate_through_space(CraneState.SHIP)
 
@@ -341,11 +417,17 @@ class Transfer(Port):
                 if len(self.to_load) != 0:
                     acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
 
+                # moving container in ship to another spots in ship
+                acc += self.iterate_through_space(CraneState.SHIP, to_move)
+
+                # moving container in ship to another spots in buffer
+                acc += self.iterate_through_space(CraneState.BUFFER, to_move)
+
         elif self.crane_state == CraneState.BUFFER:
 
-            # did you the crane to a pointless position
+            # did you put the crane to a pointless position
             if self.buffer.get_cell_state(self.crane_position.x, self.crane_position.y) != Condition.OCCUPIED:
-                raise ValueError("Invalid Buffer position sought at " + str(self.crane_position))
+                raise Exception("Invalid Buffer position sought at " + str(self.crane_position))
             # latch container
             to_move = self.buffer.cells[self.crane_position.x][self.crane_position.y].container
 
@@ -358,13 +440,15 @@ class Transfer(Port):
             acc += self.iterate_through_space(CraneState.SHIP, to_move)
 
             # moving crane in buffer to another spot in the buffer
-            acc += self.iterate_through_space(CraneState.BUFFER)
+            # pointless operation
+            # acc += self.iterate_through_space(CraneState.BUFFER)
 
             # moving crane in buffer to another spot in the ship
             acc += self.iterate_through_space(CraneState.SHIP)
 
             # moving crane in buffer to the Truck bay
-            acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
+            if len(self.to_load) > 0:
+                acc.append(self.create_derivative(Coordinate(0, 0), CraneState.TRUCKBAY))
 
         elif self.crane_state == CraneState.TRUCKBAY:
 
@@ -395,7 +479,7 @@ class Transfer(Port):
             for i, (coord, c) in enumerate(self.to_offload):
                 # need to do a memory comparison and not a pure value one like with
                 # Failed memory comparison will need to use some id system
-                if c.description == container.description:
+                if c.id == container.id:
                     # is the offloaded container now in the trucks?
                     if new_space == CraneState.TRUCKBAY:
                         self.to_offload.pop(i)
@@ -411,7 +495,7 @@ class Transfer(Port):
         else:
             # search for to_stay
             for i, (coord, c) in enumerate(self.to_stay):
-                if c.description == container.description:
+                if c.id == container.id:
                     new_coord = ContainerCoordinate(new_position.x, new_position.y)
                     new_coord.is_in_buffer = (new_space == CraneState.BUFFER)
 
