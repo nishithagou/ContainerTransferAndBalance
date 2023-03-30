@@ -4,20 +4,21 @@
 2. Open Vs code.
 3. clone our git repo:
 4. cd into repository: 
+5. cd into algorithm/backEnd folder
+6. run python3 main.py
 
-4. Tkinter installation.
-To compile user interface graphic, we have to install a Tkinter is a standard in VS code.
-To install Tkinter, we need Python pre-installed.
+
+
+To see Tkinter work (not fully implemented)
+Tkinter installation. To compile user interface graphic, we have to install a Tkinter is a standard in VS code. To install Tkinter, we need Python pre-installed.
 
 command: pip install tk
 command for mac: brew install python-tk
 expected output: Successfully installed tk-0.1.0
 
-Tkinter:
-Tkinter is a standard library in Python which is used for GUI application. Tkinter has various controls which are used to build a GUI-based application.
+1. cd into algorithm/frontEnd folder
+2. run python3 grid_animation.py
 
-
-3. run main.py file
 
 
 
