@@ -74,7 +74,7 @@ def signout(first_name, last_name, log_file):
 
 
 #***************************************ANIMATION PART************************************#
-#defining size vals for grid
+
 ROWS = 9
 COLS = 12
 SQUARE_SIZE = 50
@@ -172,23 +172,8 @@ def finalDraw(containerList):
     move_box(canvas, box, coords_list)
     window.mainloop()
 
-done_state = False
 
-def done_button_click():
-    global done_state
-    if done_state:
-        print("Button is now off")
-        done_state = False
-    else:
-        print("Button is now on")
-        done_state = True
-
-
-def logout_button_click():
-    # Set the global animation_running flag to False to stop the animation
-    global running
-    running = False
-    print("Logout button was clicked")    
+   
 
 #**********************************************************command line interactions*****************************************************************
 #the container coords have to be reversed, so x =>y and y =>x
