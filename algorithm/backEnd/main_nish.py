@@ -3,10 +3,21 @@ from container import Container
 from cell import Cell, Condition
 from port import Transfer
 from coordinate import Coordinate
+import os
 
 # #ship_load = read_manifest(input("Type in the name of the manifest file:\n"))
 # reads manifest and uploads container vals
 # substantially done by Nishitha
+global lineCount
+
+#looked online for this function
+def export_to_desktop(text, filename):
+    desktop_path = os.path.expanduser("~/Desktop")
+    filepath = os.path.join(desktop_path, filename)
+    with open(filepath, 'w') as file:
+        file.write(text)
+
+
 def read_manifest(file) -> list:
     containers = []
     manifest = open(file, 'r')
@@ -28,25 +39,26 @@ def read_manifest(file) -> list:
         elif name != "UNUSED":
             print("Ship has container named <" + name + ">")
             containers.append((Cell(Condition.OCCUPIED, Container(name, w)), Coordinate(x, y)))
+
     return containers
 
 def signin(first_name, last_name, log_file):
     first_name = input("First Name: ")
     while first_name == "":
-        print("Invalid name, please try again")
+        print("Not a valid name, please enter again")
         first_name = input("First Name: ")
     last_name = input("Last Name: ")
     while last_name == "":
-        print("Invalid name, please try again")
+        print("Not a valid name, please enter again")
         last_name = input("Last Name: ")
     print("Hello " + first_name + " " + last_name + "\n")
     log_file.write(str(datetime.datetime.now()) + " " + first_name + " " + last_name + " signed in\n")
     return [first_name, last_name]
 
 def signout(first_name, last_name, log_file):
-    option = input("Enter c to add a commment to the log file. \n or \nEnter x to logout. \n Enter any other key to continue to the next step: ")
-    if option == "c":
-        comment = input("Please enter the text you would like to add to the log: ")
+    option = input("Enter l to add a commment to the log file. \nor \nEnter x to logout. \n Enter any other key to continue to the next step: ")
+    if option == "l":
+        comment = input("Please enter your comment: ")
         log_file.write(str(datetime.datetime.now()) + " " + first_name + " " + last_name + " logged: " + comment + "\n")
         return [first_name, last_name]    
     elif option == "x":
@@ -67,9 +79,10 @@ first_name = inputs[0]
 last_name = inputs[1]
 print("Hello " + first_name + " " + last_name)
 
-ship_load = read_manifest('ShipCase1.txt')
-
+ship_load = read_manifest(input("Type in the name of the manifest file: "))
 log_file.write(str(datetime.datetime.now()) + " Manifest " + 'ShipCase3.txt'+ " was opened, there are " + str(len(ship_load)) + " containers on the ship\n")
+offload_list = []
+onload_list = []
 
 ship_load.reverse()
 while int(input("Type 1 to select a container to offload from ship (or 2 to continue to the next step):\n")) == 1:
@@ -80,16 +93,26 @@ while int(input("Type 1 to select a container to offload from ship (or 2 to cont
             if ship_load[i][0].container.description == container_name and not ship_load[i][0].container.to_offload:
                 found = True
                 ship_load[i][0].container.to_offload = True
+                offload_list.append(container_name)
                 break
     if not found:
         print("Could not find container <" + container_name + "> which has not already been marked to offload")
 to_load = []
 while int(input("Type 1 to input a container name for onload (or type 2 to begin Transfer calculations:\n")) == 1:
     name = input("Enter the name of the container:\n")
+    if name != 'NAN' and name != 'UNUSED':
+        offload_list.append(name)
     if name == 'NAN' or name == 'UNUSED':
         print("NAN and UNUSED are reserved words. Please enter the complete container name. \n")
         name = name = input("Enter the name of the container:\n")
+        offload_list.append(name)
     weight = input("Input weight of container: \n")
+    logy = input("Enter l if you would like to log a comment about the onloaded container: ")
+    if(logy == 'l'):
+        comment = input("Please enter your comment: ")
+        log_file.write(str(datetime.datetime.now()) + " " + first_name + " " + last_name + " logged: " + comment + "\n")
+    else:
+        continue
     to_load.append(Container(name, weight))
 
 
@@ -131,28 +154,47 @@ for element in steps:
         acc += str(i) + " "
     print(element.move_description)
     print(acc)
-    yesorno = input("Did you complete this step? (Enter Y or N): ")
-    if(yesorno == 'Y'):
+    yesorno = input("Did you complete this step? (Enter Y or N): Enter l to log a comment. ")
+    logOut = input("Would you like to sign out? (Enter Y or N) ")
+    if(logOut == "Y" or logOut == 'y'):
+        signout(first_name,last_name,log_file)
+    if(yesorno == "l"):
+        comment = input("Please enter your comment: ")
+        log_file.write(str(datetime.datetime.now()) + " " + first_name + " " + last_name + " logged: " + comment + "\n")
+        yesorno = input("Did you complete this step? (Enter Y or N): ")
+        if(yesorno == "Y"):
+            continue
+    elif(yesorno == 'Y'):
         continue
     else:
         print(" \n Repeating step for you. ")
         print(element.move_description)
         print(acc)
-        yesorno = input("Did you complete this step? (Enter Y or N): ")
-        if(yesorno == 'Y'):
+        yesorno = input("Did you complete this step? (Enter Y or N): Enter l to log a comment.")
+        if(yesorno == "l"):
+            comment = input("Please enter your comment: ")
+            log_file.write(str(datetime.datetime.now()) + " " + first_name + " " + last_name + "logged: " + comment + "\n")
+        elif(yesorno == 'Y'):
             continue
-        
+
 print("All steps completed.")
+for p in offload_list:
+    log_file.write(str(datetime.datetime.now()) + " container " + p + " was successfully offloaded. \n")
+for k in onload_list:
+    log_file.write(str(datetime.datetime.now()) + " container " + k + " was successfully loaded. \n")
+
 print(str(solution.cost_to_get_here) + " minutes")
+#print(solution.to_manifest_string())
+
+outboundManifest = "OUTBOUND.txt"
+
+
+#with open(outboundManifest, 'w') as outfile:
+#   outfile.write(solution.to_manifest_string())
+
+export_to_desktop(solution.to_manifest_string(), 'OUTBOUND.txt')
+
+
+
 print(str(len(stack)) + " " + str(len(history)))
-# for i in range(cells.__len__()):
-#     acc = ""
-#     for j in range(cells[0].__len__()):
-#         acc += str(cells[i][j]) + " "
-#     print(acc)
-#
-# for i in range(cells.__len__()):
-#     acc = ""
-#     for j in range(cells[0].__len__()):
-#         acc += str(cells[i][j]) + " "
-#     print(acc)
+
