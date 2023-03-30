@@ -199,6 +199,16 @@ class Port(ABC):
             # Only dealing with distance between ship and buffer also pretty trivial
             return start.x + start.y + end.x + end.y + 4
 
+    # def to_string_formatted(self) -> str:
+    #     acc = ""
+    #     empty_offset = " " * self.buffer.width
+    #     for row in range(self.ship.height):
+    #         if row > self.buffer.width:
+    #             for col in range(self.buffer.width):
+    #                 if self.buffer.get_cell_state(col, row) == Condition.EMPTY:
+    #                     acc += "_"
+    #     return acc
+
     @staticmethod
     def to_string_from_state(state: CraneState) -> str:
         if state == CraneState.SHIP:
@@ -218,10 +228,73 @@ class Port(ABC):
     def __str__(self):
         pass
 
-    @abstractmethod
+    def create_derivative(self, end: Coordinate, end_space: CraneState, container: Container = None):
+        # Create a copy of the current transfer state
+        deriv = copy.deepcopy(self)
+        deriv.parent = self
+
+        if container is None:
+            deriv.previous_crane_only_move = True
+        else:
+            deriv.previous_crane_only_move = False
+
+        # Calculate the manhattan distance between the crane's current position and the end position
+        translation_move = self.calculate_manhattan_distance(self.crane_position, end, self.crane_state, end_space)
+
+        # Move the crane and container to the specified end coordinates and update the transfer state
+        deriv.move_container_and_crane(container, self.crane_position, end, self.crane_state, end_space)
+
+        holds_container = container is not None
+        if self.crane_state != end_space:
+            deriv.move_sequence = MoveSequence(self.crane_position, end, self.crane_state, end_space, holds_container)
+        else:
+            # TODO: Check for minimum clearance
+            deriv.move_sequence = MoveSequence(self.crane_position, end, self.crane_state, end_space, holds_container,
+                                               0)
+
+        # update the Transfer's internal vectors
+        deriv.update_container_coordinate_vectors(container, end, end_space)
+
+        # Update the cost to get to this new state and calculate the A* heuristic
+        deriv.cost_to_get_here += translation_move
+        deriv.calculate_a_star()
+
+        # Return the new transfer state
+        return deriv
+
+    # no longer updates container vectors
     def move_container_and_crane(self, container: Container, start: Coordinate, end: Coordinate,
                                  start_space: CraneState, end_space: CraneState):
-        pass
+        # just moving the crane
+        if container is None:
+            # another sanity check
+            if end_space == CraneState.SHIP:
+                if self.ship.get_cell_state(end.x, end.y) != Condition.OCCUPIED:
+                    raise Exception("Crane has moved into an non-occupied position in the ship")
+            elif end_space == CraneState.BUFFER:
+                if self.buffer.get_cell_state(end.x, end.y) != Condition.OCCUPIED:
+                    raise Exception("Crane has moved into an non-occupied position in the buffer")
+            self.crane_position = Coordinate(end.x, end.y)
+            self.crane_state = copy.deepcopy(end_space)
+            self.move_description = f"\nMoving crane only from {Port.to_string_from_state(start_space)} {str(start)} " \
+                                    f"to {Port.to_string_from_state(end_space)} {str(end)}"
+        # moving the crane and the container
+        else:
+            self.crane_position = Coordinate(end.x, end.y)
+            self.crane_state = copy.deepcopy(end_space)
+            # add container at end
+            if end_space == CraneState.BUFFER:
+                self.buffer.add_container(end.x, end.y, container)
+            elif end_space == CraneState.SHIP:
+                self.ship.add_container(end.x, end.y, container)
+            # remove container at beginning
+            if start_space == CraneState.BUFFER:
+                self.buffer.remove_container(start.x, start.y)
+            elif start_space == CraneState.SHIP:
+                self.ship.remove_container(start.x, start.y)
+            self.move_description = f"\nMoving container {str(container)} from " \
+                                    f"{Port.to_string_from_state(start_space)} {str(start)} to " \
+                                    f"{Port.to_string_from_state(end_space)} {str(end)}"
 
 
 # class SIFT extends Port
@@ -249,7 +322,7 @@ class SIFT(Port):
 
     def calculate_solution(self):
         # sort containers heaviest to lightest
-        self.containers.sort(key= lambda x:x[1].weight, reverse=True)
+        self.containers.sort(key=lambda x: x[1].weight, reverse=True)
         row: int = self.ship.height - 1
         # integer division
         col: int = self.ship.width // 2 - 1
@@ -284,14 +357,38 @@ class SIFT(Port):
                     col = (self.ship.width - (col + 1)) - 1
 
     def calculate_heuristic(self) -> int:
-        return 0
+        lower_bound_time_left = 0
+        for cc in self.containers:
+            possible_spaces: list = self.unique_weights[cc[1]]
+            current_pos: ContainerCoordinate = cc[0]
+            smallest_distance: int = 99999
+            for pos in possible_spaces:
+                acc = 0
+                if current_pos.is_in_buffer:
+                    acc += current_pos.x + current_pos.y
+                    acc += pos.x + pos.y
+                else:
+                    dif_x = current_pos.x - pos.x
+                    if dif_x < 0:
+                        dif_x = -dif_x
+                    dif_y = current_pos.y - pos.y
+                    if dif_y < 0:
+                        dif_y = -dif_y
+                    acc += dif_x + dif_y
+                if acc < smallest_distance:
+                    smallest_distance = acc
+            lower_bound_time_left += smallest_distance
+        if lower_bound_time_left == 0:
+            self.solved = True
+        return lower_bound_time_left
 
-    def move_container_and_crane(self, container: Container, start: Coordinate, end: Coordinate,
-                                 start_space: CraneState, end_space: CraneState):
-        pass
+    def iterate(self):
 
     def try_all_operators(self) -> []:
-        return list
+        acc = []
+        if self.crane_state == CraneState.SHIP:
+
+        return acc
 
     def __str__(self):
         acc = ""
@@ -393,6 +490,10 @@ class Transfer(Port):
         # this is just the remaining number of containers that need to load. Will just
         # assume all containers can just phase through one another
         minutes_to_load = len(self.to_load) * 2
+        addtl: int = 1
+        for i in range(len(self.to_load)):
+            minutes_to_load += addtl
+            addtl += 1
 
         # this is the remaining number of containers that need to offload
         # thanks to how we defined the coordinate system the manhattan distance is
@@ -430,41 +531,20 @@ class Transfer(Port):
         lower_bound_time_left += minutes_to_load + minutes_to_offload + minutes_to_move_from_buffer_to_ship
         if lower_bound_time_left == 0:
             self.solved = True
+
+        # Penalize poor crane placement
+        if self.crane_state == CraneState.SHIP and len(self.to_offload) > 0 and \
+                not self.ship.cells[pos.x][pos.y].container.to_offload:
+            lower_bound_time_left += 1
+
+        # penalize goose runs with the crane
+        # if self.crane_state != CraneState.TRUCKBAY:
+        #     diff = len(self.to_offload) - len(self.to_load)
+        #     if diff < 0:
+        #         diff = -diff
+        #     lower_bound_time_left += diff * 2
+
         return lower_bound_time_left
-
-    def create_derivative(self, end: Coordinate, end_space: CraneState, container: Container = None):
-        # Create a copy of the current transfer state
-        deriv = copy.deepcopy(self)
-        deriv.parent = self
-
-        if container is None:
-            deriv.previous_crane_only_move = True
-        else:
-            deriv.previous_crane_only_move = False
-
-        # Calculate the manhattan distance between the crane's current position and the end position
-        translation_move = self.calculate_manhattan_distance(self.crane_position, end, self.crane_state, end_space)
-        
-        # Move the crane and container to the specified end coordinates and update the transfer state
-        deriv.move_container_and_crane(container, self.crane_position, end, self.crane_state, end_space)
-
-        holds_container = container is not None
-        if self.crane_state != end_space:
-            deriv.move_sequence = MoveSequence(self.crane_position, end, self.crane_state, end_space, holds_container)
-        else:
-            # TODO: Check for minimum clearance
-            deriv.move_sequence = MoveSequence(self.crane_position, end, self.crane_state, end_space, holds_container,
-                                               0)
-
-        # update the Transfer's internal vectors
-        deriv.update_container_coordinate_vectors(container, end, end_space)
-
-        # Update the cost to get to this new state and calculate the A* heuristic
-        deriv.cost_to_get_here += translation_move
-        deriv.calculate_a_star()
-        
-        # Return the new transfer state
-        return deriv
 
     def iterate_through_space(self,  end_space: CraneState, container: Container = None) -> list:
         if end_space == CraneState.TRUCKBAY:
@@ -480,11 +560,14 @@ class Transfer(Port):
                         self.crane_position != Coordinate(0, 0):
                     continue
                 if space.get_top_physical_cell(col).state == Condition.OCCUPIED:
+
                     end = Coordinate(col, space.min_clearance[col] + 1)
+
+                    if space.cells[end.x][end.y].container.to_offload:
+                        acc = [self.create_derivative(end, end_space)]
+                        return acc
+
                     acc.append(self.create_derivative(end, end_space))
-                    # do not need to simulate going to all spots in the buffer
-                    if end_space == CraneState.BUFFER:
-                        break
         else:
             for col in range(space.width):
                 if col == self.crane_position.x and end_space == self.crane_state:
@@ -625,36 +708,3 @@ class Transfer(Port):
             self.to_load.pop()
             self.to_stay.append(to_add)
 
-    # no longer updates container vectors
-    def move_container_and_crane(self, container: Container, start: Coordinate, end: Coordinate,
-                                 start_space: CraneState, end_space: CraneState):
-        # just moving the crane
-        if container is None:
-            # another sanity check
-            if end_space == CraneState.SHIP:
-                if self.ship.get_cell_state(end.x, end.y) != Condition.OCCUPIED:
-                    raise Exception("Crane has moved into an non-occupied position in the ship")
-            elif end_space == CraneState.BUFFER:
-                if self.buffer.get_cell_state(end.x, end.y) != Condition.OCCUPIED:
-                    raise Exception("Crane has moved into an non-occupied position in the buffer")
-            self.crane_position = Coordinate(end.x, end.y)
-            self.crane_state = copy.deepcopy(end_space)
-            self.move_description = f"\nMoving crane only from {Port.to_string_from_state(start_space)} {str(start)} " \
-                                    f"to {Port.to_string_from_state(end_space)} {str(end)}"
-        # moving the crane and the container
-        else:
-            self.crane_position = Coordinate(end.x, end.y)
-            self.crane_state = copy.deepcopy(end_space)
-            # add container at end
-            if end_space == CraneState.BUFFER:
-                self.buffer.add_container(end.x, end.y, container)
-            elif end_space == CraneState.SHIP:
-                self.ship.add_container(end.x, end.y, container)
-            # remove container at beginning
-            if start_space == CraneState.BUFFER:
-                self.buffer.remove_container(start.x, start.y)
-            elif start_space == CraneState.SHIP:
-                self.ship.remove_container(start.x, start.y)
-            self.move_description = f"\nMoving container {str(container)} from " \
-                                    f"{Port.to_string_from_state(start_space)} {str(start)} to " \
-                                    f"{Port.to_string_from_state(end_space)} {str(end)}"

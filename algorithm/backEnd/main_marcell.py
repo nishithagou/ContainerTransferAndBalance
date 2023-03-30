@@ -1,24 +1,51 @@
-from space import Space
 from container import Container
 from cell import Cell, Condition
 from port import Transfer
 from coordinate import Coordinate
 
 
-ship_load = [(Cell(Condition.OCCUPIED, Container("Meow", 5, True)), Coordinate(0, 8)),
-             (Cell(Condition.OCCUPIED, Container("Puff", 8, True)), Coordinate(1, 8)),
-             # (Cell(Condition.OCCUPIED, Container("Duck", 15, False)), Coordinate(1, 7)),
-             # (Cell(Condition.OCCUPIED, Container("dud1", 15, False)), Coordinate(0, 7)),
-             # (Cell(Condition.OCCUPIED, Container("dud2", 15, False)), Coordinate(2, 7)),
-             # (Cell(Condition.OCCUPIED, Container("dud3", 15, False)), Coordinate(3, 7)),
-             # (Cell(Condition.OCCUPIED, Container("dud4", 15, False)), Coordinate(1, 6)),
-             # (Cell(Condition.OCCUPIED, Container("dud5", 15, False)), Coordinate(1, 5)),
-             # (Cell(Condition.OCCUPIED, Container("dud6", 15, False)), Coordinate(1, 4)),
-             # (Cell(Condition.OCCUPIED, Container("dud7", 15, False)), Coordinate(1, 3)),
-             (Cell(Condition.OCCUPIED, Container("Ruff", 10, True)), Coordinate(2, 8)),
-             (Cell(Condition.OCCUPIED, Container("Beep", 7, True)), Coordinate(3, 8))]
-to_load = [Container("Truck Load 1", -1), Container("Truck Load 2", -1)]
-t = Transfer(Coordinate(5, 9), Coordinate(24, 5), ship_load, to_load)
+# reads manifest and uploads container vals
+# substantially done by Nishitha
+def read_manifest(file) -> list:
+    containers = []
+    manifest = open(file, 'r')
+    while True:
+        line = manifest.readline()
+        if not line:
+            break
+        line = line.strip()
+        # name
+        name = (line[18:])
+        # x and y coords
+        # need to transform coordinate system
+        x = int(line[1:3]) + 1
+        y = 9 - int(line[4:6])
+        # weight
+        w = int(line[10:15])
+        if name == "NAN":
+            containers.append((Cell(Condition.HULL), Coordinate(x, y)))
+        elif name != "UNUSED":
+            print("Ship has container named <" + name + ">")
+            containers.append((Cell(Condition.OCCUPIED, Container(name, w)), Coordinate(x, y)))
+    return containers
+
+
+ship_load = read_manifest(input("Type in the name of the manifest file:\n"))
+while int(input("Type 1 to select a container to offload from ship (or 2 to continue to the next step):\n")) == 1:
+    container_name = input("Type in precisely the name of the container you wish to offload:\n")
+    found: bool = False
+    for i in range(len(ship_load)):
+        if ship_load[i][0].state == Condition.OCCUPIED:
+            if ship_load[i][0].container.description == container_name and not ship_load[i][0].container.to_offload:
+                found = True
+                ship_load[i][0].container.to_offload = True
+                break
+    if not found:
+        print("Could not find container <" + container_name + "> which has not already been marked to offload")
+to_load = []
+while int(input("Type 1 to input a container name (or type 2 to begin Transfer calculations:\n")) == 1:
+    to_load.append(Container(input("Enter the name of the container:\n"), -1))
+t = Transfer(Coordinate(12, 9), Coordinate(24, 5), ship_load, to_load)
 print(str(t))
 history = {str(t)}
 stack = [t]
